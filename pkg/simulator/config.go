@@ -10,26 +10,26 @@ type StageConfig struct {
 	// Runtime control
 	Duration      time.Duration // Total duration of simulation
 	MaxItems      int           // Optional max number of items to process
-	InputRate     time.Duration // Rate at which items are generated (generator only)
-	ItemGenerator func() any // Custom item generator function
+	InputRate     time.Duration // Rate at which items are generated (generator only) // x
+	ItemGenerator func() any // Custom item generator function // x
 
 	// Bursts & load spikes
-	InputBurst    func() []any  // Generates input bursts at intervals
-	BurstCount    int           // Total number of bursts to inject
-	BurstInterval time.Duration // Minimum interval between bursts
+	InputBurst    func() []any  // Generates input bursts at intervals // x
+	BurstCount    int           // Total number of bursts to inject // x
+	BurstInterval time.Duration // Minimum interval between bursts // x
 
 	// Worker control
-	RoutineNum         int           // Number of goroutines per stage
-	BufferSize         int           // Channel buffer size
-	WorkerDelay        time.Duration // Simulated delay per item
-	ErrorRate          float64       // Probability of simulated processing error
-	RetryCount         int           // Number of times to retry on error
-	DropOnBackpressure bool          // Drop input if channel is full
-	IsGenerator        bool          // Whether the stage is a generator
+	RoutineNum         int           // Number of goroutines per stage // x
+	BufferSize         int           // Channel buffer size // x
+	WorkerDelay        time.Duration // Simulated delay per item // x
+	ErrorRate          float64           // Probability of operations to fail // x
+	RetryCount         int           // Number of times to retry on error // x
+	DropOnBackpressure bool          // Drop input if channel is full // x
+	IsGenerator        bool          // Whether the stage is a generator // x
+	PropagateErrors    bool          // Whether to propagate errors to the next stage // x
 
 	// System integration
-	OnError func(error, any) // Custom error handler
-	Ctx     context.Context  // Optional cancellation control
+	Ctx     context.Context  // Optional cancellation control // x
 }
 
 // DefaultConfig returns a new SimulationConfig with sensible defaults

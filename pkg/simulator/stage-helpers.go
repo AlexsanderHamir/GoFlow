@@ -13,6 +13,10 @@ func (s *Stage) processBurst(items []any) {
 		default:
 			if s.Config.DropOnBackpressure {
 				s.metrics.RecordDropped()
+			} else {
+				// Block and wait for the channel to be ready
+				s.Output <- item
+				s.metrics.RecordOutput()
 			}
 		}
 	}
@@ -37,6 +41,32 @@ func (s *Stage) processRegularGeneration() {
 	if s.Config.InputRate > 0 {
 		time.Sleep(s.Config.InputRate)
 	}
-	
+
 	s.Output <- s.Config.ItemGenerator()
+}
+
+// processWorkerItem handles the processing of a single item in the worker loop
+func (s *Stage) processWorkerItem(item any) (any, error) {
+	startTime := time.Now()
+	result, err := s.processItem(item)
+	processingTime := time.Since(startTime)
+	s.metrics.RecordProcessing(processingTime, err)
+	
+	return result, err
+}
+
+// handleWorkerOutput manages sending the processed item to the output channel with backpressure handling
+func (s *Stage) handleWorkerOutput(result any) {
+	select {
+	case s.Output <- result:
+		s.metrics.RecordOutput()
+	default:
+		if s.Config.DropOnBackpressure {
+			s.metrics.RecordDropped()
+		} else {
+			// Block and wait for the channel to be ready
+			s.Output <- result
+			s.metrics.RecordOutput()
+		}
+	}
 }

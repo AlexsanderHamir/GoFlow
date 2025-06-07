@@ -13,6 +13,7 @@ type StageMetrics struct {
 	// Counters
 	processedItems uint64
 	errorCount     uint64
+	propagatedErrors uint64
 	retryCount     uint64
 	droppedItems   uint64
 	outputItems    uint64
@@ -35,6 +36,15 @@ func NewStageMetrics() *StageMetrics {
 	}
 }
 
+// RecordError records an error
+func (m *StageMetrics) RecordError(propagated bool) {
+	if propagated {
+		atomic.AddUint64(&m.propagatedErrors, 1)
+	} else {
+		atomic.AddUint64(&m.errorCount, 1)
+	}
+}
+
 // RecordProcessing records the processing of an item
 func (m *StageMetrics) RecordProcessing(duration time.Duration, err error) {
 	atomic.AddUint64(&m.processedItems, 1)
@@ -50,6 +60,7 @@ func (m *StageMetrics) RecordProcessing(duration time.Duration, err error) {
 	if duration < m.minProcessingTime {
 		m.minProcessingTime = duration
 	}
+	
 	if duration > m.maxProcessingTime {
 		m.maxProcessingTime = duration
 	}

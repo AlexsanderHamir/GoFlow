@@ -3,6 +3,7 @@ package simulator
 import (
 	"context"
 	"fmt"
+	"math/rand/v2"
 	"sync"
 	"time"
 )
@@ -67,14 +68,16 @@ func (s *Stage) initializeWorkers(ctx context.Context) {
 	}
 }
 
-func (s *Stage) generatorWorker(ctx context.Context) error {
+func (s *Stage) generatorWorker(ctx context.Context) {
+	defer s.wg.Done()
+
 	burstCount := 0
 	lastBurstTime := time.Now()
 
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return
 		default:
 			if s.shouldProcessBurst(burstCount, lastBurstTime) {
 				items := s.Config.InputBurst()
@@ -102,27 +105,23 @@ func (s *Stage) worker(ctx context.Context) {
 				return
 			}
 
-			startTime := time.Now()
+			if s.Config.ErrorRate > 0 && rand.Float64() < s.Config.ErrorRate {
+				s.metrics.RecordError(true)
 
-			result, err := s.processItem(item)
-			processingTime := time.Since(startTime)
-			s.metrics.RecordProcessing(processingTime, err)
-			if err != nil {
-				if s.Config.OnError != nil {
-					s.Config.OnError(err, item)
+				if s.Config.PropagateErrors {
+					s.Output <- fmt.Errorf("error propagated from stage %s", s.Name)
 				}
+
 				continue
 			}
 
-			// Try to send the result, respecting backpressure settings
-			select {
-			case s.Output <- result:
-				s.metrics.RecordOutput()
-			default:
-				if s.Config.DropOnBackpressure {
-					s.metrics.RecordDropped()
-				}
+			result, err := s.processWorkerItem(item)
+			if err != nil {
+				s.metrics.RecordError(false)
+				continue
 			}
+
+			s.handleWorkerOutput(result)
 		}
 	}
 }
@@ -131,15 +130,8 @@ func (s *Stage) worker(ctx context.Context) {
 func (s *Stage) processItem(item any) (any, error) {
 	var lastErr error
 	for attempt := 0; attempt <= s.Config.RetryCount; attempt++ {
-		// Simulate worker delay if configured
 		if s.Config.WorkerDelay > 0 {
 			time.Sleep(s.Config.WorkerDelay)
-		}
-
-		// Simulate random errors if configured
-		if s.Config.ErrorRate > 0 && shouldSimulateError(s.Config.ErrorRate) {
-			lastErr = fmt.Errorf("simulated error on attempt %d", attempt+1)
-			continue
 		}
 
 		result, err := s.WorkerFunc(item)
@@ -149,16 +141,11 @@ func (s *Stage) processItem(item any) (any, error) {
 
 		lastErr = err
 	}
+
 	return nil, lastErr
 }
 
 // GetMetrics returns a copy of the current stage metrics
 func (s *Stage) GetMetrics() *StageMetrics {
 	return s.metrics.Clone()
-}
-
-// shouldSimulateError determines if we should simulate an error based on the error rate
-func shouldSimulateError(rate float64) bool {
-	// TODO: Implement proper random error simulation
-	return false
 }
