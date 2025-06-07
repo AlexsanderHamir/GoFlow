@@ -9,14 +9,14 @@ import (
 
 // Stage represents a processing stage in the pipeline
 type Stage struct {
-	Name          string
-	Input         chan any
-	Output        chan any
-	WorkerFunc    func(item any) (any, error)
-	Config        *StageConfig
-	wg            sync.WaitGroup
+	Name       string
+	Input      chan any
+	Output     chan any
+	WorkerFunc func(item any) (any, error)
+	Config     *StageConfig
+	wg         sync.WaitGroup
 
-	metrics   		*StageMetrics
+	metrics *StageMetrics
 }
 
 // NewStage creates a new stage with the given configuration
@@ -26,29 +26,29 @@ func NewStage(name string, config *StageConfig) *Stage {
 	}
 
 	return &Stage{
-		Name:          name,
-		Output:        make(chan any, config.BufferSize),
-		Config:        config,
-		metrics:       NewStageMetrics(),
+		Name:    name,
+		Output:  make(chan any, config.BufferSize),
+		Config:  config,
+		metrics: NewStageMetrics(),
 	}
 }
 
 // Start begins processing items in the stage
 func (s *Stage) Start(ctx context.Context) error {
-		if s.WorkerFunc == nil {
-			return fmt.Errorf("worker function not set")
-		}
+	if s.WorkerFunc == nil {
+		return fmt.Errorf("worker function not set")
+	}
 
-		if s.Config.IsGenerator && s.Config.ItemGenerator == nil {
-			return fmt.Errorf("generator function not set")
-		}
+	if s.Config.IsGenerator && s.Config.ItemGenerator == nil {
+		return fmt.Errorf("generator function not set")
+	}
 
-		s.wg.Add(s.Config.RoutineNum)
-		if s.Config.IsGenerator {
-			s.initializeGenerators(ctx)
-		} else {
-			s.initializeWorkers(ctx)
-		}
+	s.wg.Add(s.Config.RoutineNum)
+	if s.Config.IsGenerator {
+		s.initializeGenerators(ctx)
+	} else {
+		s.initializeWorkers(ctx)
+	}
 
 	return nil
 }
@@ -68,12 +68,23 @@ func (s *Stage) initializeWorkers(ctx context.Context) {
 }
 
 func (s *Stage) generatorWorker(ctx context.Context) error {
+	burstCount := 0
+	lastBurstTime := time.Now()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			s.Output <- s.Config.ItemGenerator()
+			if s.shouldProcessBurst(burstCount, lastBurstTime) {
+				items := s.Config.InputBurst()
+				s.processBurst(items)
+				burstCount++
+				lastBurstTime = time.Now()
+				continue
+			}
+
+			s.processRegularGeneration()
 		}
 	}
 }

@@ -10,7 +10,7 @@ type StageConfig struct {
 	// Runtime control
 	Duration      time.Duration // Total duration of simulation
 	MaxItems      int           // Optional max number of items to process
-	InputRate     time.Duration // Rate at which items are generated (first stage only)
+	InputRate     time.Duration // Rate at which items are generated (generator only)
 	ItemGenerator func() any // Custom item generator function
 
 	// Bursts & load spikes

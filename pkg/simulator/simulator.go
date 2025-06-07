@@ -62,7 +62,7 @@ func (s *Simulator) Start() error {
 		}
 
 		if i < len(s.stages)-1 {
-			stage.Output = s.stages[i+1].Input
+			s.stages[i+1].Input = stage.Output
 		}
 	}
 
