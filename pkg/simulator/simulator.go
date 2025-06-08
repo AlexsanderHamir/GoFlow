@@ -4,23 +4,26 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 )
 
 // Simulator represents a concurrent pipeline simulator
 type Simulator struct {
-	stages []*Stage
-	mu     sync.RWMutex
-	ctx    context.Context
-	cancel context.CancelFunc
+	Duration time.Duration
+	stages   []*Stage
+	mu       sync.RWMutex
+	ctx      context.Context
+	cancel   context.CancelFunc
+	done     chan struct{} // Channel to signal simulation completion
 }
 
 // NewSimulator creates a new simulator instance
-func NewSimulator(ctx context.Context) *Simulator {
-	ctx, cancel := context.WithCancel(ctx)
+func NewSimulator(ctx context.Context, cancel context.CancelFunc) *Simulator {
 	return &Simulator{
 		stages: make([]*Stage, 0),
 		ctx:    ctx,
 		cancel: cancel,
+		done:   make(chan struct{}),
 	}
 }
 
@@ -61,10 +64,20 @@ func (s *Simulator) Start() error {
 			return fmt.Errorf("failed to start stage %s: %w", stage.Name, err)
 		}
 
+		if i == len(s.stages)-1 {
+			stage.Config.IsFinal = true
+		}
+
 		if i < len(s.stages)-1 {
 			s.stages[i+1].Input = stage.Output
 		}
 	}
+
+	go func() {
+		time.Sleep(s.Duration)
+		s.Stop()
+		close(s.done) // Signal that the simulation is complete
+	}()
 
 	return nil
 }
@@ -74,12 +87,15 @@ func (s *Simulator) Stop() {
 	s.cancel()
 }
 
+// Done returns a channel that will be closed when the simulation is complete
+func (s *Simulator) Done() <-chan struct{} {
+	return s.done
+}
+
 // GetStages returns a copy of the stages slice
 func (s *Simulator) GetStages() []*Stage {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	stages := make([]*Stage, len(s.stages))
-	copy(stages, s.stages)
-	return stages
+	return s.stages
 }
