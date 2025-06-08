@@ -1,6 +1,7 @@
 package simulator
 
 import (
+	"log"
 	"time"
 )
 
@@ -8,13 +9,15 @@ import (
 func (s *Stage) processBurst(items []any) {
 	for _, item := range items {
 		select {
+		case <-s.Config.Ctx.Done():
+			log.Println("Context done, dropping burst")
+			return
 		case s.Output <- item:
 			s.metrics.RecordOutput()
 		default:
 			if s.Config.DropOnBackpressure {
 				s.metrics.RecordDropped()
 			} else {
-				// Block and wait for the channel to be ready
 				s.Output <- item
 				s.metrics.RecordOutput()
 			}
@@ -42,7 +45,22 @@ func (s *Stage) processRegularGeneration() {
 		time.Sleep(s.Config.InputRate)
 	}
 
-	s.Output <- s.Config.ItemGenerator()
+	select {
+	case <-s.Config.Ctx.Done():
+		log.Println("Context done, stopping generation")
+		return
+	case s.Output <- s.Config.ItemGenerator():
+		log.Println("Item generated and sent to output")
+		s.metrics.RecordOutput()
+	default:
+		log.Println("Backpressure detected")
+		if s.Config.DropOnBackpressure {
+			s.metrics.RecordDropped()
+		} else {
+			s.Output <- s.Config.ItemGenerator()
+			s.metrics.RecordOutput()
+		}
+	}
 }
 
 // processWorkerItem handles the processing of a single item in the worker loop
@@ -58,13 +76,15 @@ func (s *Stage) processWorkerItem(item any) (any, error) {
 // handleWorkerOutput manages sending the processed item to the output channel with backpressure handling
 func (s *Stage) handleWorkerOutput(result any) {
 	select {
+	case <-s.Config.Ctx.Done():
+		log.Println("Context done, dropping item")
+		return
 	case s.Output <- result:
 		s.metrics.RecordOutput()
 	default:
 		if s.Config.DropOnBackpressure {
 			s.metrics.RecordDropped()
 		} else {
-			// Block and wait for the channel to be ready
 			s.Output <- result
 			s.metrics.RecordOutput()
 		}
