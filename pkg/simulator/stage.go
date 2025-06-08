@@ -15,8 +15,8 @@ type Stage struct {
 	Input   chan any
 	Output  chan any
 	Config  *StageConfig
-	wg      sync.WaitGroup
 	metrics *StageMetrics
+	sem     chan struct{}
 }
 
 // NewStage creates a new stage with the given configuration
@@ -29,12 +29,13 @@ func NewStage(name string, config *StageConfig) *Stage {
 		Name:    name,
 		Output:  make(chan any, config.BufferSize),
 		Config:  config,
+		sem:     make(chan struct{}, 1),
 		metrics: NewStageMetrics(),
 	}
 }
 
 // Start begins processing items in the stage
-func (s *Stage) Start(ctx context.Context) error {
+func (s *Stage) Start(ctx context.Context, wg *sync.WaitGroup) error {
 	if s.Config.WorkerFunc == nil && !s.Config.IsGenerator {
 		return fmt.Errorf("worker function not set")
 	}
@@ -43,32 +44,37 @@ func (s *Stage) Start(ctx context.Context) error {
 		return fmt.Errorf("generator function not set")
 	}
 
-	s.wg.Add(s.Config.RoutineNum)
 	if s.Config.IsGenerator {
-		s.initializeGenerators()
+		s.initializeGenerators(wg)
 	} else {
-		s.initializeWorkers()
+		s.initializeWorkers(wg)
 	}
 
 	return nil
 }
 
-func (s *Stage) initializeGenerators() {
-	s.wg.Add(s.Config.RoutineNum)
+func (s *Stage) initializeGenerators(wg *sync.WaitGroup) {
 	for range s.Config.RoutineNum {
-		go s.generatorWorker()
+		go s.generatorWorker(wg)
 	}
 }
 
-func (s *Stage) initializeWorkers() {
-	s.wg.Add(s.Config.RoutineNum)
+func (s *Stage) initializeWorkers(wg *sync.WaitGroup) {
 	for range s.Config.RoutineNum {
-		go s.worker()
+		go s.worker(wg)
 	}
 }
 
-func (s *Stage) generatorWorker() {
-	defer s.wg.Done()
+func (s *Stage) generatorWorker(wg *sync.WaitGroup) {
+	defer func() {
+		select {
+		case s.sem <- struct{}{}:
+			close(s.Output)
+		default:
+		}
+		s.metrics.Stop()
+		wg.Done()
+	}()
 
 	burstCount := 0
 	lastBurstTime := time.Now()
@@ -83,17 +89,27 @@ func (s *Stage) generatorWorker() {
 				s.processBurst(items)
 				burstCount++
 				lastBurstTime = time.Now()
+				s.metrics.RecordGenerated()
 				continue
 			}
 
 			s.processRegularGeneration()
+			s.metrics.RecordGenerated()
 		}
 	}
 }
 
 // worker processes items from the input channel
-func (s *Stage) worker() {
-	defer s.wg.Done()
+func (s *Stage) worker(wg *sync.WaitGroup) {
+	defer func() {
+		select {
+		case s.sem <- struct{}{}:
+			close(s.Output)
+		default:
+		}
+		s.metrics.Stop()
+		wg.Done()
+	}()
 
 	for {
 		select {
@@ -103,15 +119,12 @@ func (s *Stage) worker() {
 			if !ok {
 				return
 			}
-
 			log.Println("Item received from input")
 
 			if s.Config.ErrorRate > 0 && rand.Float64() < s.Config.ErrorRate {
 				if s.Config.PropagateErrors {
-					s.metrics.RecordError(true)
 					s.Output <- fmt.Errorf("error propagated from stage %s", s.Name)
 				} else {
-					s.metrics.RecordError(false)
 					s.Output <- fmt.Errorf("error from stage %s", s.Name)
 				}
 
@@ -120,15 +133,15 @@ func (s *Stage) worker() {
 
 			result, err := s.processWorkerItem(item)
 			if err != nil {
-				s.metrics.RecordError(false)
 				continue
 			}
 
 			if s.Config.IsFinal {
+				fmt.Println("Stage", s.Name, "is final")
 				log.Println("Final stage, item processed and dropped")
 			} else {
-				log.Println("Non-final stage, item processed and sent to output")
 				s.handleWorkerOutput(result)
+				log.Println("Non-final stage, item processed and sent to output")
 			}
 		}
 	}
@@ -164,5 +177,5 @@ func (s *Stage) processItem(item any) (any, error) {
 
 // GetMetrics returns a copy of the current stage metrics
 func (s *Stage) GetMetrics() *StageMetrics {
-	return s.metrics.Clone()
+	return s.metrics
 }
