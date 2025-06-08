@@ -6,12 +6,10 @@ import (
 )
 
 // SimulationConfig holds the configuration for a stage
-type StageConfig struct {	
+type StageConfig struct {
 	// Runtime control
-	Duration      time.Duration // Total duration of simulation
-	MaxItems      int           // Optional max number of items to process
 	InputRate     time.Duration // Rate at which items are generated (generator only) // x
-	ItemGenerator func() any // Custom item generator function // x
+	ItemGenerator func() any    // Custom item generator function // x
 
 	// Bursts & load spikes
 	InputBurst    func() []any  // Generates input bursts at intervals // x
@@ -22,14 +20,15 @@ type StageConfig struct {
 	RoutineNum         int           // Number of goroutines per stage // x
 	BufferSize         int           // Channel buffer size // x
 	WorkerDelay        time.Duration // Simulated delay per item // x
-	ErrorRate          float64           // Probability of operations to fail // x
+	ErrorRate          float64       // Probability of operations to fail // x
 	RetryCount         int           // Number of times to retry on error // x
 	DropOnBackpressure bool          // Drop input if channel is full // x
 	IsGenerator        bool          // Whether the stage is a generator // x
+	IsFinal            bool          // Whether the stage is the final stage // x
 	PropagateErrors    bool          // Whether to propagate errors to the next stage // x
 
-	// System integration
-	Ctx     context.Context  // Optional cancellation control // x
+	WorkerFunc func(item any) (any, error) // x
+	Ctx    context.Context
 }
 
 // DefaultConfig returns a new SimulationConfig with sensible defaults
