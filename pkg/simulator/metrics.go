@@ -11,55 +11,55 @@ type StageMetrics struct {
 	mu sync.RWMutex
 
 	// Counters
-	processedItems uint64
-	droppedItems   uint64
-	outputItems    uint64
+	ProcessedItems uint64
+	DroppedItems   uint64
+	OutputItems    uint64
 
 	// State
-	startTime time.Time
-	endTime   time.Time
+	StartTime time.Time
+	EndTime   time.Time
 
 	// Generator stats
-	generatedItems uint64
+	GeneratedItems uint64
 }
 
 // NewStageMetrics creates a new metrics collector
 func NewStageMetrics() *StageMetrics {
 	return &StageMetrics{
-		startTime: time.Now(),
+		StartTime: time.Now(),
 	}
 }
 
 // RecordProcessing records the processing of an item
 func (m *StageMetrics) RecordProcessing() {
-	atomic.AddUint64(&m.processedItems, 1)
+	atomic.AddUint64(&m.ProcessedItems, 1)
 }
 
 // RecordGenerated records a generated item
 func (m *StageMetrics) RecordGenerated() {
-	atomic.AddUint64(&m.generatedItems, 1)
+	atomic.AddUint64(&m.GeneratedItems, 1)
 }
 
 // RecordDropped records a dropped item
 func (m *StageMetrics) RecordDropped() {
-	atomic.AddUint64(&m.droppedItems, 1)
+	atomic.AddUint64(&m.DroppedItems, 1)
 }
 
 // RecordDroppedBurst records a dropped burst
 func (m *StageMetrics) RecordDroppedBurst(items int) {
-	atomic.AddUint64(&m.droppedItems, uint64(items))
+	atomic.AddUint64(&m.DroppedItems, uint64(items))
 }
 
 // RecordOutput records a successful output
 func (m *StageMetrics) RecordOutput() {
-	atomic.AddUint64(&m.outputItems, 1)
+	atomic.AddUint64(&m.OutputItems, 1)
 }
 
 // Stop marks the end of metrics collection
 func (m *StageMetrics) Stop() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.endTime = time.Now()
+	m.EndTime = time.Now()
 }
 
 // GetStats returns a map of current metrics
@@ -68,16 +68,16 @@ func (m *StageMetrics) GetStats() map[string]any {
 	defer m.mu.RUnlock()
 
 	// For generator stages, return only generator-specific metrics
-	if atomic.LoadUint64(&m.generatedItems) > 0 {
+	if atomic.LoadUint64(&m.GeneratedItems) > 0 {
 		return map[string]any{
-			"generated_items": atomic.LoadUint64(&m.generatedItems),
-			"drop_rate":       float64(atomic.LoadUint64(&m.droppedItems)) / float64(atomic.LoadUint64(&m.generatedItems)),
-			"dropped_items":   atomic.LoadUint64(&m.droppedItems),
+			"generated_items": atomic.LoadUint64(&m.GeneratedItems),
+			"drop_rate":       float64(atomic.LoadUint64(&m.DroppedItems)) / float64(atomic.LoadUint64(&m.GeneratedItems)),
+			"dropped_items":   atomic.LoadUint64(&m.DroppedItems),
 		}
 	}
 
 	// For worker stages, return processing metrics
-	processed := atomic.LoadUint64(&m.processedItems)
+	processed := atomic.LoadUint64(&m.ProcessedItems)
 	if processed == 0 {
 		return map[string]any{
 			"processed_items": 0,
@@ -87,15 +87,15 @@ func (m *StageMetrics) GetStats() map[string]any {
 		}
 	}
 
-	duration := m.endTime.Sub(m.startTime)
-	if m.endTime.IsZero() {
-		duration = time.Since(m.startTime)
+	duration := m.EndTime.Sub(m.StartTime)
+	if m.EndTime.IsZero() {
+		duration = time.Since(m.StartTime)
 	}
 
 	return map[string]any{
 		"processed_items": processed,
-		"drop_rate":       float64(atomic.LoadUint64(&m.droppedItems)) / float64(processed),
-		"dropped_items":   atomic.LoadUint64(&m.droppedItems),
+		"drop_rate":       float64(atomic.LoadUint64(&m.DroppedItems)) / float64(processed),
+		"dropped_items":   atomic.LoadUint64(&m.DroppedItems),
 		"throughput":      float64(processed) / duration.Seconds(),
 	}
 }

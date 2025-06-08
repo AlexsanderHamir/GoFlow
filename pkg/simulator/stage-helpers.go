@@ -12,25 +12,25 @@ func (s *Stage) processBurst(items []any) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			s.metrics.RecordDroppedBurst(processedItems - len(items))
+			s.Metrics.RecordDroppedBurst(processedItems - len(items))
 		}
 	}()
 
 	for _, item := range items {
 		select {
 		case <-s.Config.Ctx.Done():
-			s.metrics.RecordDropped()
+			s.Metrics.RecordDropped()
 			return
 		case s.Output <- item:
 			processedItems++
-			s.metrics.RecordOutput()
+			s.Metrics.RecordOutput()
 		default:
 			if s.Config.DropOnBackpressure {
-				s.metrics.RecordDropped()
+				s.Metrics.RecordDropped()
 			} else {
 				s.Output <- item
 				processedItems++
-				s.metrics.RecordOutput()
+				s.Metrics.RecordOutput()
 			}
 		}
 	}
@@ -50,7 +50,7 @@ func (s *Stage) shouldExecuteBurst(burstCount int, lastBurstTime time.Time) bool
 func (s *Stage) processRegularGeneration() {
 	defer func() {
 		if r := recover(); r != nil {
-			s.metrics.RecordDropped()
+			s.Metrics.RecordDropped()
 		}
 	}()
 
@@ -65,16 +65,16 @@ func (s *Stage) processRegularGeneration() {
 	item := s.Config.ItemGenerator()
 	select {
 	case <-s.Config.Ctx.Done():
-		s.metrics.RecordDropped()
+		s.Metrics.RecordDropped()
 		return
 	case s.Output <- item:
-		s.metrics.RecordOutput()
+		s.Metrics.RecordOutput()
 	default:
 		if s.Config.DropOnBackpressure {
-			s.metrics.RecordDropped()
+			s.Metrics.RecordDropped()
 		} else {
 			s.Output <- item
-			s.metrics.RecordOutput()
+			s.Metrics.RecordOutput()
 		}
 	}
 }
@@ -82,7 +82,7 @@ func (s *Stage) processRegularGeneration() {
 // processWorkerItem handles the processing of a single item in the worker loop
 func (s *Stage) processWorkerItem(item any) (any, error) {
 	result, err := s.processItem(item)
-	s.metrics.RecordProcessing()
+	s.Metrics.RecordProcessing()
 
 	return result, err
 }
@@ -91,22 +91,22 @@ func (s *Stage) processWorkerItem(item any) (any, error) {
 func (s *Stage) handleWorkerOutput(result any) {
 	defer func() {
 		if r := recover(); r != nil {
-			s.metrics.RecordDropped()
+			s.Metrics.RecordDropped()
 		}
 	}()
 
 	select {
 	case <-s.Config.Ctx.Done():
-		s.metrics.RecordDropped()
+		s.Metrics.RecordDropped()
 		return
 	case s.Output <- result:
-		s.metrics.RecordOutput()
+		s.Metrics.RecordOutput()
 	default:
 		if s.Config.DropOnBackpressure {
-			s.metrics.RecordDropped()
+			s.Metrics.RecordDropped()
 		} else {
 			s.Output <- result
-			s.metrics.RecordOutput()
+			s.Metrics.RecordOutput()
 		}
 	}
 }
@@ -173,16 +173,16 @@ func (s *Stage) processItem(item any) (any, error) {
 }
 
 func (s *Stage) GetMetrics() *StageMetrics {
-	return s.metrics
+	return s.Metrics
 }
 
 func (s *Stage) stageTermination(wg *sync.WaitGroup) {
 	select {
-	case s.sem <- struct{}{}:
+	case s.Sem <- struct{}{}:
 		close(s.Output)
 	default:
 	}
-	s.metrics.Stop()
+	s.Metrics.Stop()
 	wg.Done()
 }
 
@@ -191,5 +191,5 @@ func (s *Stage) executeBurst(burstCount *int, lastBurstTime *time.Time) {
 	s.processBurst(items)
 	*burstCount++
 	*lastBurstTime = time.Now()
-	s.metrics.RecordGenerated()
+	s.Metrics.RecordGenerated()
 }

@@ -14,10 +14,10 @@ type Stage struct {
 
 	Input  chan any
 	Output chan any
-	sem    chan struct{}
+	Sem    chan struct{}
 
 	Config  *StageConfig
-	metrics *StageMetrics
+	Metrics *StageMetrics
 
 	IsFinal bool
 }
@@ -32,8 +32,8 @@ func NewStage(name string, config *StageConfig) *Stage {
 		Name:    name,
 		Output:  make(chan any, config.BufferSize),
 		Config:  config,
-		sem:     make(chan struct{}, 1),
-		metrics: NewStageMetrics(),
+		Sem:     make(chan struct{}, 1),
+		Metrics: NewStageMetrics(),
 	}
 }
 
@@ -64,7 +64,7 @@ func (s *Stage) generatorWorker(wg *sync.WaitGroup) {
 			}
 
 			s.processRegularGeneration()
-			s.metrics.RecordGenerated()
+			s.Metrics.RecordGenerated()
 		}
 	}
 }
@@ -88,14 +88,14 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 
 			result, err := s.processWorkerItem(item)
 			if err != nil {
-				s.metrics.RecordDropped()
+				s.Metrics.RecordDropped()
 				continue
 			}
 
 			if !s.IsFinal {
 				s.handleWorkerOutput(result)
 			} else {
-				s.metrics.RecordDropped()
+				s.Metrics.RecordDropped()
 			}
 		}
 	}

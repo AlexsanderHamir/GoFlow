@@ -10,28 +10,27 @@ import (
 // Simulator represents a concurrent pipeline simulator
 type Simulator struct {
 	Duration time.Duration
-	stages   []*Stage
-	mu       sync.RWMutex
-	ctx      context.Context
-	cancel   context.CancelFunc
-	done     chan struct{} // Channel to signal simulation completion
-	wg       sync.WaitGroup
+	Stages   []*Stage
+	Mu       sync.RWMutex
+	Ctx      context.Context
+	Cancel   context.CancelFunc
+	Quit     chan struct{} // Channel to signal simulation completion
+	Wg       sync.WaitGroup
 }
 
 // NewSimulator creates a new simulator instance
 func NewSimulator(ctx context.Context, cancel context.CancelFunc) *Simulator {
 	return &Simulator{
-		stages: make([]*Stage, 0),
-		ctx:    ctx,
-		cancel: cancel,
-		done:   make(chan struct{}),
+		Ctx:    ctx,
+		Cancel: cancel,
+		Quit:   make(chan struct{}),
 	}
 }
 
 // AddStage adds a new stage to the pipeline
 func (s *Simulator) AddStage(stage *Stage) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.Mu.Lock()
+	defer s.Mu.Unlock()
 
 	if stage == nil {
 		return fmt.Errorf("stage cannot be nil")
@@ -41,39 +40,39 @@ func (s *Simulator) AddStage(stage *Stage) error {
 		return fmt.Errorf("stage name cannot be empty")
 	}
 
-	for _, existingStage := range s.stages {
+	for _, existingStage := range s.Stages {
 		if existingStage.Name == stage.Name {
 			return fmt.Errorf("stage with name %s already exists", stage.Name)
 		}
 	}
 
-	s.stages = append(s.stages, stage)
+	s.Stages = append(s.Stages, stage)
 	return nil
 }
 
 // Start begins the simulation
 func (s *Simulator) Start() error {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
 
-	if len(s.stages) == 0 {
+	if len(s.Stages) == 0 {
 		return fmt.Errorf("no stages to run")
 	}
 
-	for i, stage := range s.stages {
-		s.wg.Add(stage.Config.RoutineNum)
+	for i, stage := range s.Stages {
+		s.Wg.Add(stage.Config.RoutineNum)
 
-		beforeLastStage := i < len(s.stages)-1
+		beforeLastStage := i < len(s.Stages)-1
 		if beforeLastStage {
-			s.stages[i+1].Input = stage.Output
+			s.Stages[i+1].Input = stage.Output
 		}
 
-		lastStage := i == len(s.stages)-1
+		lastStage := i == len(s.Stages)-1
 		if lastStage {
 			stage.IsFinal = true
 		}
 
-		if err := stage.Start(s.ctx, &s.wg); err != nil {
+		if err := stage.Start(s.Ctx, &s.Wg); err != nil {
 			return fmt.Errorf("failed to start stage %s: %w", stage.Name, err)
 		}
 	}
@@ -81,8 +80,8 @@ func (s *Simulator) Start() error {
 	go func() {
 		time.Sleep(s.Duration)
 		s.Stop()
-		s.wg.Wait()
-		close(s.done)
+		s.Wg.Wait()
+		close(s.Quit)
 	}()
 
 	return nil
@@ -90,20 +89,20 @@ func (s *Simulator) Start() error {
 
 // Stop gracefully stops the simulation
 func (s *Simulator) Stop() {
-	s.cancel()
+	s.Cancel()
 }
 
 // Done returns a channel that will be closed when the simulation is complete
 func (s *Simulator) Done() <-chan struct{} {
-	return s.done
+	return s.Quit
 }
 
 // GetStages returns a copy of the stages slice
 func (s *Simulator) GetStages() []*Stage {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
 
-	return s.stages
+	return s.Stages
 }
 
 func (s *Simulator) PrintStats() {
