@@ -45,6 +45,11 @@ func (m *StageMetrics) RecordDropped() {
 	atomic.AddUint64(&m.droppedItems, 1)
 }
 
+// RecordDroppedBurst records a dropped burst
+func (m *StageMetrics) RecordDroppedBurst(items int) {
+	atomic.AddUint64(&m.droppedItems, uint64(items))
+}
+
 // RecordOutput records a successful output
 func (m *StageMetrics) RecordOutput() {
 	atomic.AddUint64(&m.outputItems, 1)
@@ -66,6 +71,8 @@ func (m *StageMetrics) GetStats() map[string]any {
 	if atomic.LoadUint64(&m.generatedItems) > 0 {
 		return map[string]any{
 			"generated_items": atomic.LoadUint64(&m.generatedItems),
+			"drop_rate":       float64(atomic.LoadUint64(&m.droppedItems)) / float64(atomic.LoadUint64(&m.generatedItems)),
+			"dropped_items":   atomic.LoadUint64(&m.droppedItems),
 		}
 	}
 
@@ -74,6 +81,7 @@ func (m *StageMetrics) GetStats() map[string]any {
 	if processed == 0 {
 		return map[string]any{
 			"processed_items": 0,
+			"dropped_items":   0,
 			"drop_rate":       0.0,
 			"throughput":      0.0,
 		}
@@ -87,6 +95,7 @@ func (m *StageMetrics) GetStats() map[string]any {
 	return map[string]any{
 		"processed_items": processed,
 		"drop_rate":       float64(atomic.LoadUint64(&m.droppedItems)) / float64(processed),
+		"dropped_items":   atomic.LoadUint64(&m.droppedItems),
 		"throughput":      float64(processed) / duration.Seconds(),
 	}
 }
