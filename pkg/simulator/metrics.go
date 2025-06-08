@@ -12,63 +12,32 @@ type StageMetrics struct {
 
 	// Counters
 	processedItems uint64
-	errorCount     uint64
-	propagatedErrors uint64
-	retryCount     uint64
 	droppedItems   uint64
 	outputItems    uint64
-
-	// Timing
-	totalProcessingTime time.Duration
-	minProcessingTime   time.Duration
-	maxProcessingTime   time.Duration
 
 	// State
 	startTime time.Time
 	endTime   time.Time
+
+	// Generator stats
+	generatedItems uint64
 }
 
 // NewStageMetrics creates a new metrics collector
 func NewStageMetrics() *StageMetrics {
 	return &StageMetrics{
-		startTime:         time.Now(),
-		minProcessingTime: time.Duration(1<<63 - 1), // Max int64
-	}
-}
-
-// RecordError records an error
-func (m *StageMetrics) RecordError(propagated bool) {
-	if propagated {
-		atomic.AddUint64(&m.propagatedErrors, 1)
-	} else {
-		atomic.AddUint64(&m.errorCount, 1)
+		startTime: time.Now(),
 	}
 }
 
 // RecordProcessing records the processing of an item
-func (m *StageMetrics) RecordProcessing(duration time.Duration, err error) {
+func (m *StageMetrics) RecordProcessing() {
 	atomic.AddUint64(&m.processedItems, 1)
-	if err != nil {
-		atomic.AddUint64(&m.errorCount, 1)
-		return
-	}
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.totalProcessingTime += duration
-	if duration < m.minProcessingTime {
-		m.minProcessingTime = duration
-	}
-	
-	if duration > m.maxProcessingTime {
-		m.maxProcessingTime = duration
-	}
 }
 
-// RecordRetry records a retry attempt
-func (m *StageMetrics) RecordRetry() {
-	atomic.AddUint64(&m.retryCount, 1)
+// RecordGenerated records a generated item
+func (m *StageMetrics) RecordGenerated() {
+	atomic.AddUint64(&m.generatedItems, 1)
 }
 
 // RecordDropped records a dropped item
@@ -88,40 +57,24 @@ func (m *StageMetrics) Stop() {
 	m.endTime = time.Now()
 }
 
-// Clone creates a copy of the current metrics
-func (m *StageMetrics) Clone() *StageMetrics {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	return &StageMetrics{
-		processedItems:      atomic.LoadUint64(&m.processedItems),
-		errorCount:          atomic.LoadUint64(&m.errorCount),
-		retryCount:          atomic.LoadUint64(&m.retryCount),
-		droppedItems:        atomic.LoadUint64(&m.droppedItems),
-		outputItems:         atomic.LoadUint64(&m.outputItems),
-		totalProcessingTime: m.totalProcessingTime,
-		minProcessingTime:   m.minProcessingTime,
-		maxProcessingTime:   m.maxProcessingTime,
-		startTime:           m.startTime,
-		endTime:             m.endTime,
-	}
-}
-
 // GetStats returns a map of current metrics
-func (m *StageMetrics) GetStats() map[string]interface{} {
+func (m *StageMetrics) GetStats() map[string]any {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	// For generator stages, return only generator-specific metrics
+	if atomic.LoadUint64(&m.generatedItems) > 0 {
+		return map[string]any{
+			"generated_items": atomic.LoadUint64(&m.generatedItems),
+		}
+	}
+
+	// For worker stages, return processing metrics
 	processed := atomic.LoadUint64(&m.processedItems)
 	if processed == 0 {
 		return map[string]any{
 			"processed_items": 0,
-			"error_rate":      0.0,
-			"retry_rate":      0.0,
 			"drop_rate":       0.0,
-			"avg_processing":  time.Duration(0),
-			"min_processing":  time.Duration(0),
-			"max_processing":  time.Duration(0),
 			"throughput":      0.0,
 		}
 	}
@@ -133,12 +86,7 @@ func (m *StageMetrics) GetStats() map[string]interface{} {
 
 	return map[string]any{
 		"processed_items": processed,
-		"error_rate":      float64(atomic.LoadUint64(&m.errorCount)) / float64(processed),
-		"retry_rate":      float64(atomic.LoadUint64(&m.retryCount)) / float64(processed),
 		"drop_rate":       float64(atomic.LoadUint64(&m.droppedItems)) / float64(processed),
-		"avg_processing":  m.totalProcessingTime / time.Duration(processed),
-		"min_processing":  m.minProcessingTime,
-		"max_processing":  m.maxProcessingTime,
 		"throughput":      float64(processed) / duration.Seconds(),
 	}
 }
