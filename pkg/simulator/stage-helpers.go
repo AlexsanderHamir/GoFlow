@@ -1,51 +1,56 @@
 package simulator
 
 import (
-	"log"
+	"fmt"
+	"sync"
 	"time"
 )
 
 // processBurst handles sending a burst of items to the output channel
 func (s *Stage) processBurst(items []any) {
+	var processedItems int
+
 	defer func() {
 		if r := recover(); r != nil {
-			log.Println("Recovered from panic in processBurst")
+			s.metrics.RecordDroppedBurst(processedItems - len(items))
 		}
 	}()
 
 	for _, item := range items {
 		select {
 		case <-s.Config.Ctx.Done():
-			log.Println("Context done, dropping burst")
+			s.metrics.RecordDropped()
 			return
 		case s.Output <- item:
+			processedItems++
 			s.metrics.RecordOutput()
 		default:
 			if s.Config.DropOnBackpressure {
 				s.metrics.RecordDropped()
 			} else {
 				s.Output <- item
+				processedItems++
 				s.metrics.RecordOutput()
 			}
 		}
 	}
 }
 
-// shouldProcessBurst determines if it's time to process a burst based on configuration and timing
-func (s *Stage) shouldProcessBurst(burstCount int, lastBurstTime time.Time) bool {
-	if s.Config.InputBurst == nil || s.Config.BurstCount <= 0 {
+// shouldExecuteBurst determines if it's time to process a burst based on configuration and timing
+func (s *Stage) shouldExecuteBurst(burstCount int, lastBurstTime time.Time) bool {
+	if s.Config.InputBurst == nil || s.Config.BurstCountTotal <= 0 {
 		return false
 	}
 
 	now := time.Now()
-	return burstCount < s.Config.BurstCount && now.Sub(lastBurstTime) >= s.Config.BurstInterval
+	return burstCount < s.Config.BurstCountTotal && now.Sub(lastBurstTime) >= s.Config.BurstInterval
 }
 
 // processRegularGeneration handles the regular item generation flow
 func (s *Stage) processRegularGeneration() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Println("Recovered from panic in processRegularGeneration")
+			s.metrics.RecordDropped()
 		}
 	}()
 
@@ -58,9 +63,9 @@ func (s *Stage) processRegularGeneration() {
 	}
 
 	item := s.Config.ItemGenerator()
-
 	select {
 	case <-s.Config.Ctx.Done():
+		s.metrics.RecordDropped()
 		return
 	case s.Output <- item:
 		s.metrics.RecordOutput()
@@ -86,25 +91,105 @@ func (s *Stage) processWorkerItem(item any) (any, error) {
 func (s *Stage) handleWorkerOutput(result any) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Println("Recovered from panic in handleWorkerOutput")
+			s.metrics.RecordDropped()
 		}
 	}()
 
 	select {
 	case <-s.Config.Ctx.Done():
-		log.Println("Context done, dropping item")
+		s.metrics.RecordDropped()
 		return
 	case s.Output <- result:
-		log.Println("Item sent to output from handleWorkerOutput")
 		s.metrics.RecordOutput()
 	default:
 		if s.Config.DropOnBackpressure {
-			log.Println("Dropping item")
 			s.metrics.RecordDropped()
 		} else {
 			s.Output <- result
-			log.Println("Item sent to output from backpressure from handleWorkerOutput")
 			s.metrics.RecordOutput()
 		}
 	}
+}
+
+// validateConfig validates the stage configuration
+func (s *Stage) validateConfig() error {
+	if s.Config.WorkerFunc == nil && !s.Config.IsGenerator {
+		return fmt.Errorf("worker function not set")
+	}
+
+	if s.Config.IsGenerator && s.Config.ItemGenerator == nil {
+		return fmt.Errorf("generator function not set")
+	}
+
+	return nil
+}
+
+// initialize initializes the stages, both generators and workers
+func (s *Stage) initializeStages(wg *sync.WaitGroup) {
+	if s.Config.IsGenerator {
+		s.initializeGenerators(wg)
+	} else {
+		s.initializeWorkers(wg)
+	}
+}
+
+func (s *Stage) initializeGenerators(wg *sync.WaitGroup) {
+	for range s.Config.RoutineNum {
+		go s.generatorWorker(wg)
+	}
+}
+
+func (s *Stage) initializeWorkers(wg *sync.WaitGroup) {
+	for range s.Config.RoutineNum {
+		go s.worker(wg)
+	}
+}
+
+// processItem handles a single item with retries if configured
+func (s *Stage) processItem(item any) (any, error) {
+	var lastErr error
+	attempt := 0
+
+	// Always process at least once
+	for {
+		if s.Config.WorkerDelay > 0 {
+			time.Sleep(s.Config.WorkerDelay)
+		}
+
+		result, err := s.Config.WorkerFunc(item)
+		if err == nil {
+			return result, nil
+		}
+
+		lastErr = err
+		attempt++
+
+		if attempt > s.Config.RetryCount {
+			break
+		}
+	}
+
+	return nil, lastErr
+}
+
+func (s *Stage) GetMetrics() *StageMetrics {
+	return s.metrics
+}
+
+func (s *Stage) stageTermination(wg *sync.WaitGroup) {
+	select {
+	case s.sem <- struct{}{}:
+		close(s.Output)
+	default:
+	}
+	s.metrics.Stop()
+	wg.Done()
+}
+
+func (s *Stage) executeBurst(burstCount *int, lastBurstTime *time.Time) {
+	items := s.Config.InputBurst()
+	s.processBurst(items)
+	*burstCount++
+	*lastBurstTime = time.Now()
+	s.metrics.RecordGenerated()
 }
