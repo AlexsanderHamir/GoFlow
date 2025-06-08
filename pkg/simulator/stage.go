@@ -3,6 +3,7 @@ package simulator
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/rand/v2"
 	"sync"
 	"time"
@@ -10,13 +11,11 @@ import (
 
 // Stage represents a processing stage in the pipeline
 type Stage struct {
-	Name       string
-	Input      chan any
-	Output     chan any
-	WorkerFunc func(item any) (any, error)
-	Config     *StageConfig
-	wg         sync.WaitGroup
-
+	Name    string
+	Input   chan any
+	Output  chan any
+	Config  *StageConfig
+	wg      sync.WaitGroup
 	metrics *StageMetrics
 }
 
@@ -36,7 +35,7 @@ func NewStage(name string, config *StageConfig) *Stage {
 
 // Start begins processing items in the stage
 func (s *Stage) Start(ctx context.Context) error {
-	if s.WorkerFunc == nil {
+	if s.Config.WorkerFunc == nil && !s.Config.IsGenerator {
 		return fmt.Errorf("worker function not set")
 	}
 
@@ -46,29 +45,29 @@ func (s *Stage) Start(ctx context.Context) error {
 
 	s.wg.Add(s.Config.RoutineNum)
 	if s.Config.IsGenerator {
-		s.initializeGenerators(ctx)
+		s.initializeGenerators()
 	} else {
-		s.initializeWorkers(ctx)
+		s.initializeWorkers()
 	}
 
 	return nil
 }
 
-func (s *Stage) initializeGenerators(ctx context.Context) {
+func (s *Stage) initializeGenerators() {
 	s.wg.Add(s.Config.RoutineNum)
 	for range s.Config.RoutineNum {
-		go s.generatorWorker(ctx)
+		go s.generatorWorker()
 	}
 }
 
-func (s *Stage) initializeWorkers(ctx context.Context) {
+func (s *Stage) initializeWorkers() {
 	s.wg.Add(s.Config.RoutineNum)
 	for range s.Config.RoutineNum {
-		go s.worker(ctx)
+		go s.worker()
 	}
 }
 
-func (s *Stage) generatorWorker(ctx context.Context) {
+func (s *Stage) generatorWorker() {
 	defer s.wg.Done()
 
 	burstCount := 0
@@ -76,7 +75,7 @@ func (s *Stage) generatorWorker(ctx context.Context) {
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-s.Config.Ctx.Done():
 			return
 		default:
 			if s.shouldProcessBurst(burstCount, lastBurstTime) {
@@ -93,23 +92,27 @@ func (s *Stage) generatorWorker(ctx context.Context) {
 }
 
 // worker processes items from the input channel
-func (s *Stage) worker(ctx context.Context) {
+func (s *Stage) worker() {
 	defer s.wg.Done()
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-s.Config.Ctx.Done():
 			return
 		case item, ok := <-s.Input:
 			if !ok {
 				return
 			}
 
-			if s.Config.ErrorRate > 0 && rand.Float64() < s.Config.ErrorRate {
-				s.metrics.RecordError(true)
+			log.Println("Item received from input")
 
+			if s.Config.ErrorRate > 0 && rand.Float64() < s.Config.ErrorRate {
 				if s.Config.PropagateErrors {
+					s.metrics.RecordError(true)
 					s.Output <- fmt.Errorf("error propagated from stage %s", s.Name)
+				} else {
+					s.metrics.RecordError(false)
+					s.Output <- fmt.Errorf("error from stage %s", s.Name)
 				}
 
 				continue
@@ -121,7 +124,12 @@ func (s *Stage) worker(ctx context.Context) {
 				continue
 			}
 
-			s.handleWorkerOutput(result)
+			if s.Config.IsFinal {
+				log.Println("Final stage, item processed and dropped")
+			} else {
+				log.Println("Non-final stage, item processed and sent to output")
+				s.handleWorkerOutput(result)
+			}
 		}
 	}
 }
@@ -129,17 +137,26 @@ func (s *Stage) worker(ctx context.Context) {
 // processItem handles a single item with retries if configured
 func (s *Stage) processItem(item any) (any, error) {
 	var lastErr error
-	for attempt := 0; attempt <= s.Config.RetryCount; attempt++ {
+	attempt := 0
+
+	// Always process at least once
+	for {
 		if s.Config.WorkerDelay > 0 {
 			time.Sleep(s.Config.WorkerDelay)
 		}
 
-		result, err := s.WorkerFunc(item)
+		result, err := s.Config.WorkerFunc(item)
 		if err == nil {
 			return result, nil
 		}
 
 		lastErr = err
+		attempt++
+
+		// Only continue if we haven't exceeded retry count
+		if attempt > s.Config.RetryCount {
+			break
+		}
 	}
 
 	return nil, lastErr
