@@ -57,19 +57,20 @@ func (s *Simulator) Start() error {
 	defer s.mu.RUnlock()
 
 	if len(s.stages) == 0 {
-		return fmt.Errorf("no stages to simulate")
+		return fmt.Errorf("no stages to run")
 	}
 
 	for i, stage := range s.stages {
 		s.wg.Add(stage.Config.RoutineNum)
-		if i < len(s.stages)-1 {
+
+		beforeLastStage := i < len(s.stages)-1
+		if beforeLastStage {
 			s.stages[i+1].Input = stage.Output
 		}
 
-		if i == len(s.stages)-1 {
-			copyConfig := *s.stages[i].Config
-			copyConfig.IsFinal = true
-			stage.Config = &copyConfig
+		lastStage := i == len(s.stages)-1
+		if lastStage {
+			stage.IsFinal = true
 		}
 
 		if err := stage.Start(s.ctx, &s.wg); err != nil {
@@ -103,4 +104,23 @@ func (s *Simulator) GetStages() []*Stage {
 	defer s.mu.RUnlock()
 
 	return s.stages
+}
+
+func (s *Simulator) PrintStats() {
+	for _, stage := range s.GetStages() {
+		fmt.Printf("\n=== Stage: %s ===\n", stage.Name)
+		stats := stage.GetMetrics().GetStats()
+		if !stage.Config.IsGenerator {
+			fmt.Printf("Performance Metrics:\n")
+			fmt.Printf("  • Processed Items: %d\n", stats["processed_items"])
+			fmt.Printf("  • Throughput: %.2f items/sec\n", stats["throughput"])
+			fmt.Printf("  • Drop Rate: %.2f%%\n", stats["drop_rate"].(float64)*100)
+			fmt.Printf("  • Dropped Items: %d\n", stats["dropped_items"])
+		} else {
+			fmt.Printf("  • Generated Items: %d\n", stats["generated_items"])
+			fmt.Printf("  • Dropped Items: %d\n", stats["dropped_items"])
+			fmt.Printf("  • Drop Rate: %.2f%%\n", stats["drop_rate"].(float64)*100)
+		}
+		fmt.Println("===================")
+	}
 }
