@@ -15,6 +15,7 @@ type Simulator struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 	done     chan struct{} // Channel to signal simulation completion
+	wg       sync.WaitGroup
 }
 
 // NewSimulator creates a new simulator instance
@@ -60,23 +61,27 @@ func (s *Simulator) Start() error {
 	}
 
 	for i, stage := range s.stages {
-		if err := stage.Start(s.ctx); err != nil {
-			return fmt.Errorf("failed to start stage %s: %w", stage.Name, err)
+		s.wg.Add(stage.Config.RoutineNum)
+		if i < len(s.stages)-1 {
+			s.stages[i+1].Input = stage.Output
 		}
 
 		if i == len(s.stages)-1 {
-			stage.Config.IsFinal = true
+			copyConfig := *s.stages[i].Config
+			copyConfig.IsFinal = true
+			stage.Config = &copyConfig
 		}
 
-		if i < len(s.stages)-1 {
-			s.stages[i+1].Input = stage.Output
+		if err := stage.Start(s.ctx, &s.wg); err != nil {
+			return fmt.Errorf("failed to start stage %s: %w", stage.Name, err)
 		}
 	}
 
 	go func() {
 		time.Sleep(s.Duration)
 		s.Stop()
-		close(s.done) // Signal that the simulation is complete
+		s.wg.Wait()
+		close(s.done)
 	}()
 
 	return nil
