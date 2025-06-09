@@ -19,6 +19,7 @@ type StageMetrics struct {
 	StartTime time.Time
 	EndTime   time.Time
 
+
 	// Generator stats
 	GeneratedItems uint64
 }

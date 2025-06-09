@@ -2,8 +2,6 @@ package simulator
 
 import (
 	"context"
-	"fmt"
-	"math/rand/v2"
 	"sync"
 	"time"
 )
@@ -81,10 +79,6 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 				return
 			}
 
-			if active := s.handleErrorSimulation(); active {
-				continue
-			}
-
 			result, err := s.processWorkerItem(item)
 			if err != nil {
 				s.Metrics.RecordDropped()
@@ -98,18 +92,4 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 			}
 		}
 	}
-}
-
-func (s *Stage) handleErrorSimulation() bool {
-	if s.Config.ErrorRate > 0 && rand.Float64() < s.Config.ErrorRate {
-		if s.Config.PropagateErrors {
-			s.Output <- fmt.Errorf("error propagated from stage %s", s.Name)
-			return true
-		} else {
-			s.Output <- fmt.Errorf("error from stage %s", s.Name)
-			return true
-		}
-	}
-
-	return false
 }

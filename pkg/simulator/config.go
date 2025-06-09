@@ -28,13 +28,13 @@ type StageConfig struct {
 	WorkerDelay time.Duration
 	// Probability of operations to fail
 	ErrorRate float64
+	// Whether to propagate errors to the next stage
+	PropagateErrors bool
 	// Number of times to retry on error
 	RetryCount int
 
 	// Drop input if channel is full
 	DropOnBackpressure bool
-	// Whether to propagate errors to the next stage
-	PropagateErrors bool
 	// Whether the stage is a generator
 	IsGenerator bool
 
