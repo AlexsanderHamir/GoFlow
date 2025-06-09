@@ -13,11 +13,9 @@ import (
 func CreateConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig, *simulator.Simulator) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Create simulator
 	sim := simulator.NewSimulator(ctx, cancel)
 	sim.Duration = 10 * time.Second
 
-	// Create configuration for stages
 	generatorConfig := &simulator.StageConfig{
 		InputRate:   100 * time.Millisecond,
 		RoutineNum:  100,
@@ -72,11 +70,7 @@ func CheckStageAccountingConsistency(simulator *simulator.Simulator, t *testing.
 		stats := stage.GetMetrics().GetStats()
 
 		if stage.Config.IsGenerator {
-			generated := stats["generated_items"].(uint64)
-			dropped := stats["dropped_items"].(uint64)
-			dropRate := stats["drop_rate"].(float64)
 			output := stats["output_items"].(uint64)
-			log.Printf("%s: generated=%d, dropped=%d, drop_rate=%.2f%%", stage.Name, generated, dropped, dropRate*100)
 			lastStageOutput = output
 			lastStageName = stage.Name
 			continue
@@ -95,4 +89,44 @@ func CheckStageAccountingConsistency(simulator *simulator.Simulator, t *testing.
 
 		log.Printf("Stage %s: output=%d", stage.Name, currentOutput)
 	}
+}
+
+func CreateConfigsAndSimulatorBurst() (*simulator.StageConfig, *simulator.StageConfig, *simulator.Simulator) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	sim := simulator.NewSimulator(ctx, cancel)
+	sim.Duration = 10 * time.Second
+
+	generatorConfig := &simulator.StageConfig{
+		InputRate:   100 * time.Millisecond,
+		RoutineNum:  100,
+		BufferSize:  100,
+		IsGenerator: true,
+		ItemGenerator: func() any {
+			return rand.Intn(100)
+		},
+		InputBurst: func() []any {
+			sliceLen := rand.Intn(10) + 1
+			result := make([]any, sliceLen)
+			for i := range sliceLen {
+				result[i] = rand.Intn(100)
+			}
+			return result
+		},
+		BurstCountTotal: 1000,
+		BurstInterval:   100 * time.Millisecond,
+		Ctx:             ctx,
+	}
+
+	globalConfig := &simulator.StageConfig{
+		RoutineNum: 100,
+		BufferSize: 100,
+		WorkerFunc: func(item any) (any, error) {
+			item = item.(int) + rand.Intn(100)
+			return item, nil
+		},
+		Ctx: ctx,
+	}
+
+	return generatorConfig, globalConfig, sim
 }

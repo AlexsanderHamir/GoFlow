@@ -78,9 +78,6 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 			return
 		case item, ok := <-s.Input:
 			if !ok {
-				if item != nil {
-					s.Metrics.RecordDropped()
-				}
 				return
 			}
 

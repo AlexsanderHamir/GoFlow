@@ -12,14 +12,14 @@ func (s *Stage) processBurst(items []any) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			s.Metrics.RecordDroppedBurst(processedItems - len(items))
+			s.Metrics.RecordDroppedBurst(len(items) - processedItems)
 		}
 	}()
 
 	for _, item := range items {
 		select {
 		case <-s.Config.Ctx.Done():
-			s.Metrics.RecordDroppedBurst(processedItems - len(items))
+			s.Metrics.RecordDroppedBurst(len(items) - processedItems)
 			return
 		case s.Output <- item:
 			processedItems++
@@ -83,7 +83,9 @@ func (s *Stage) processRegularGeneration() {
 // processWorkerItem handles the processing of a single item in the worker loop
 func (s *Stage) processWorkerItem(item any) (any, error) {
 	result, err := s.processItem(item)
-	s.Metrics.RecordProcessing()
+	if result != nil {
+		s.Metrics.RecordProcessing()
+	}
 
 	return result, err
 }
@@ -181,16 +183,17 @@ func (s *Stage) stageTermination(wg *sync.WaitGroup) {
 	select {
 	case s.Sem <- struct{}{}:
 		close(s.Output)
+		s.Metrics.Stop()
 	default:
 	}
-	s.Metrics.Stop()
+
 	wg.Done()
 }
 
 func (s *Stage) executeBurst(burstCount *int, lastBurstTime *time.Time) {
 	items := s.Config.InputBurst()
+	s.Metrics.RecordGeneratedBurst(len(items))
 	s.processBurst(items)
 	*burstCount++
 	*lastBurstTime = time.Now()
-	s.Metrics.RecordGenerated()
 }
