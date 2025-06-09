@@ -9,13 +9,18 @@ import (
 
 // Simulator represents a concurrent pipeline simulator
 type Simulator struct {
+	// Duration of the simulation
 	Duration time.Duration
-	Stages   []*Stage
-	Mu       sync.RWMutex
-	Ctx      context.Context
-	Cancel   context.CancelFunc
-	Quit     chan struct{} // Channel to signal simulation completion
-	Wg       sync.WaitGroup
+	// MaxGeneratedItems is the maximum number of items to generate.
+	// If set, the simulation will run until the number of generated items is reached instead of the duration.
+	MaxGeneratedItems int
+
+	Stages []*Stage
+	Mu     sync.RWMutex
+	Ctx    context.Context
+	Cancel context.CancelFunc
+	Quit   chan struct{} // Channel to signal simulation completion
+	Wg     sync.WaitGroup
 }
 
 // NewSimulator creates a new simulator instance
@@ -60,6 +65,11 @@ func (s *Simulator) Start() error {
 	}
 
 	for i, stage := range s.Stages {
+		if i == 0 {
+			stage.MaxGeneratedItems = s.MaxGeneratedItems
+			stage.Stop = s.Stop
+		}
+
 		s.Wg.Add(stage.Config.RoutineNum)
 
 		beforeLastStage := i < len(s.Stages)-1
@@ -78,8 +88,12 @@ func (s *Simulator) Start() error {
 	}
 
 	go func() {
-		time.Sleep(s.Duration)
-		s.Stop()
+		durationActive := s.MaxGeneratedItems <= 0 && s.Duration > 0
+		if durationActive {
+			time.Sleep(s.Duration)
+			s.Stop()
+		}
+
 		s.Wg.Wait()
 		close(s.Quit)
 	}()

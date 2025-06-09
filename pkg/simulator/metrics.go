@@ -19,7 +19,6 @@ type StageMetrics struct {
 	StartTime time.Time
 	EndTime   time.Time
 
-
 	// Generator stats
 	GeneratedItems uint64
 }
@@ -104,7 +103,7 @@ func (m *StageMetrics) GetStats() map[string]any {
 		"processed_items": processed,
 		"drop_rate":       float64(atomic.LoadUint64(&m.DroppedItems)) / float64(processed),
 		"dropped_items":   atomic.LoadUint64(&m.DroppedItems),
-		"throughput":      float64(processed) / duration.Seconds(),
+		"throughput":      float64(atomic.LoadUint64(&m.OutputItems)) / duration.Seconds(),
 		"output_items":    atomic.LoadUint64(&m.OutputItems),
 	}
 }
