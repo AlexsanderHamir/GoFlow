@@ -73,6 +73,7 @@ func (m *StageMetrics) GetStats() map[string]any {
 			"generated_items": atomic.LoadUint64(&m.GeneratedItems),
 			"drop_rate":       float64(atomic.LoadUint64(&m.DroppedItems)) / float64(atomic.LoadUint64(&m.GeneratedItems)),
 			"dropped_items":   atomic.LoadUint64(&m.DroppedItems),
+			"output_items":    atomic.LoadUint64(&m.OutputItems),
 		}
 	}
 
@@ -84,6 +85,7 @@ func (m *StageMetrics) GetStats() map[string]any {
 			"dropped_items":   0,
 			"drop_rate":       0.0,
 			"throughput":      0.0,
+			"output_items":    0,
 		}
 	}
 
@@ -97,5 +99,6 @@ func (m *StageMetrics) GetStats() map[string]any {
 		"drop_rate":       float64(atomic.LoadUint64(&m.DroppedItems)) / float64(processed),
 		"dropped_items":   atomic.LoadUint64(&m.DroppedItems),
 		"throughput":      float64(processed) / duration.Seconds(),
+		"output_items":    atomic.LoadUint64(&m.OutputItems),
 	}
 }

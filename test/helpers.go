@@ -65,37 +65,38 @@ func CreateStages(sim *simulator.Simulator, generatorConfig *simulator.StageConf
 }
 
 func CheckStageAccountingConsistency(simulator *simulator.Simulator, t *testing.T) {
-	var lastStageAccountingObjects uint64
-	log.Printf("Starting stage accounting consistency check")
-	for i, stage := range simulator.Stages {
+	var lastStageOutput uint64
+	var lastStageName string
+
+	for _, stage := range simulator.Stages {
 		stats := stage.GetMetrics().GetStats()
-		if stage.Config.IsGenerator || stage.IsFinal {
-			log.Printf("Skipping stage %s (Generator: %v, Final: %v)", stage.Name, stage.Config.IsGenerator, stage.IsFinal)
+
+		if stage.Config.IsGenerator {
+			generated := stats["generated_items"].(uint64)
+			dropped := stats["dropped_items"].(uint64)
+			dropRate := stats["drop_rate"].(float64)
+			output := stats["output_items"].(uint64)
+			log.Printf("%s: generated=%d, dropped=%d, drop_rate=%.2f%%", stage.Name, generated, dropped, dropRate*100)
+			lastStageOutput = output
+			lastStageName = stage.Name
 			continue
 		}
 
-		processed := stats["processed_items"].(uint64)
-		dropped := stats["dropped_items"].(uint64)
-		total := processed + dropped
-
-		if i == 1 {
-			lastStageAccountingObjects = total
-			log.Printf("Stage %s (first non-generator): processed=%d, dropped=%d, total=%d",
-				stage.Name, processed, dropped, total)
+		if stage.IsFinal {
 			continue
 		}
 
-		currentStageAccountingObjects := total
-		log.Printf("Stage %s: processed=%d, dropped=%d, total=%d, expected=%d",
-			stage.Name, processed, dropped, currentStageAccountingObjects, lastStageAccountingObjects)
+		currentOutput := stats["output_items"].(uint64)
+		currentDropped := stats["dropped_items"].(uint64)
 
-		if currentStageAccountingObjects != lastStageAccountingObjects {
-			log.Printf("❌ Accounting mismatch detected in stage %s", stage.Name)
-			t.Fatalf("Stage %s processed %d objects, expected %d", stage.Name, currentStageAccountingObjects, lastStageAccountingObjects)
-			simulator.PrintStats()
-		} else {
-			log.Printf("✓ Stage %s accounting consistent", stage.Name)
+		total := currentOutput + currentDropped
+		if lastStageOutput != total {
+			t.Fatalf("%s output %d does not match stage %s total %d", lastStageName, lastStageOutput, stage.Name, total)
 		}
+
+		lastStageOutput = currentOutput
+		lastStageName = stage.Name
+
+		log.Printf("Stage %s: output=%d", stage.Name, currentOutput)
 	}
-	log.Printf("Completed stage accounting consistency check")
 }

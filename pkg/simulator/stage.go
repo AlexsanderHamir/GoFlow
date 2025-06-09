@@ -64,7 +64,6 @@ func (s *Stage) generatorWorker(wg *sync.WaitGroup) {
 			}
 
 			s.processRegularGeneration()
-			s.Metrics.RecordGenerated()
 		}
 	}
 }
@@ -79,6 +78,9 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 			return
 		case item, ok := <-s.Input:
 			if !ok {
+				if item != nil {
+					s.Metrics.RecordDropped()
+				}
 				return
 			}
 

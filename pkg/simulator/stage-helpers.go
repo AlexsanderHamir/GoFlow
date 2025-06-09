@@ -19,7 +19,7 @@ func (s *Stage) processBurst(items []any) {
 	for _, item := range items {
 		select {
 		case <-s.Config.Ctx.Done():
-			s.Metrics.RecordDropped()
+			s.Metrics.RecordDroppedBurst(processedItems - len(items))
 			return
 		case s.Output <- item:
 			processedItems++
@@ -63,6 +63,7 @@ func (s *Stage) processRegularGeneration() {
 	}
 
 	item := s.Config.ItemGenerator()
+	s.Metrics.RecordGenerated()
 	select {
 	case <-s.Config.Ctx.Done():
 		s.Metrics.RecordDropped()
