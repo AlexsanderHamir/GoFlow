@@ -82,16 +82,12 @@ func CheckStageAccountingConsistency(simulator *simulator.Simulator, t *testing.
 			continue
 		}
 
-		if stage.IsFinal {
-			continue
-		}
-
 		currentOutput := stats["output_items"].(uint64)
 		currentDropped := stats["dropped_items"].(uint64)
 
 		total := currentOutput + currentDropped
 		if lastStageOutput != total {
-			t.Fatalf("%s output %d does not match stage %s total %d", lastStageName, lastStageOutput, stage.Name, total)
+			t.Fatalf("%s last output %d does not match current stage %s total %d", lastStageName, lastStageOutput, stage.Name, total)
 		}
 
 		lastStageOutput = currentOutput
