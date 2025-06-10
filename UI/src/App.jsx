@@ -1,7 +1,59 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import ReactFlow, {
+  Background,
+  Controls,
+  MiniMap,
+  useNodesState,
+  useEdgesState,
+} from "reactflow";
+import "reactflow/dist/style.css";
 
 function App() {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => {
+    // Load messages from localStorage on initial render
+    const savedMessages = localStorage.getItem("stageSetupMessages");
+    return savedMessages ? JSON.parse(savedMessages) : [];
+  });
+
+  // React Flow state
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  // Transform messages into nodes and edges
+  const transformMessagesToFlow = useCallback((msgs) => {
+    const newNodes = msgs.map((msg, index) => ({
+      id: `stage-${msg.stage_name}-${msg.routine_num}`,
+      data: {
+        label: `${msg.stage_name}\nRoutine: ${msg.routine_num}\n${
+          msg.is_generator ? "Generator" : "Stage"
+        }`,
+        ...msg,
+      },
+      position: { x: index * 250, y: index % 2 === 0 ? 100 : 250 },
+      type: msg.is_generator ? "input" : "default",
+    }));
+
+    const newEdges = [];
+    for (let i = 0; i < msgs.length - 1; i++) {
+      if (!msgs[i].is_final) {
+        newEdges.push({
+          id: `e-${i}-${i + 1}`,
+          source: newNodes[i].id,
+          target: newNodes[i + 1].id,
+          animated: true,
+        });
+      }
+    }
+
+    setNodes(newNodes);
+    setEdges(newEdges);
+  }, []);
+
+  useEffect(() => {
+    localStorage.removeItem("stageSetupMessages");
+    localStorage.setItem("stageSetupMessages", JSON.stringify(messages));
+    transformMessagesToFlow(messages);
+  }, [messages, transformMessagesToFlow]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -13,7 +65,6 @@ function App() {
         try {
           const text = await event.data.text();
           const parsed = JSON.parse(text);
-          console.log(parsed);
           setMessages((prev) => [...prev, parsed]);
         } catch (e) {
           console.error("Failed to parse message:", e);
@@ -30,18 +81,17 @@ function App() {
   }, []);
 
   return (
-    <div>
-      <h1>Stage Setup Messages</h1>
-      <ul>
-        {messages.map((msg, index) => (
-          <li key={index}>
-            <strong>Type:</strong> {msg.type},<strong> StageName:</strong>{" "}
-            {msg.stage_name},<strong> RoutineNum:</strong> {msg.routine_num},
-            <strong> IsFinal:</strong> {String(msg.is_final)},
-            <strong> IsGenerator:</strong> {String(msg.is_generator)}
-          </li>
-        ))}
-      </ul>
+    <div style={{ width: "100vw", height: "100vh" }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        fitView
+      >
+        <Background />
+        <Controls />
+      </ReactFlow>
     </div>
   );
 }
