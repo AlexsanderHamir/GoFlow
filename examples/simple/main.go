@@ -16,12 +16,12 @@ func main() {
 
 	// Create simulator
 	sim := simulator.NewSimulator(ctx, cancel)
-	sim.Duration = 30 * time.Minute
+	sim.Duration = 10 * time.Second
 
 	// Create configuration for stages
 	generatorConfig := &simulator.StageConfig{
 		InputRate:   100 * time.Millisecond,
-		RoutineNum:  100,
+		RoutineNum:  10,
 		BufferSize:  1000,
 		IsGenerator: true,
 		ItemGenerator: func() any {
