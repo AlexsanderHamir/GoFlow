@@ -102,8 +102,9 @@ func ServeWs(server *Server, w http.ResponseWriter, r *http.Request) {
 	}
 
 	client := &Client{server: server, conn: conn, send: make(chan []byte, maxMessageSize)}
+	log.Println("Client created")
 	client.server.register <- client
-	log.Println("Client registered")
+	log.Println("Client sent to server")
 
 	go client.writePump()
 }

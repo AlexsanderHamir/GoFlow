@@ -24,7 +24,7 @@ function App() {
       ws.onerror = (error) => console.error("WebSocket error:", error);
 
       return () => ws.close();
-    }, 1); // 1 millisecond delay
+    }, 1);
 
     return () => clearTimeout(timer);
   }, []);

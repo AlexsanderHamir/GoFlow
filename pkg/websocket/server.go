@@ -46,16 +46,21 @@ func (h *Server) Run() {
 			}
 			return
 		case client := <-h.register:
-			if h.client != nil {
-				close(h.client.send)
-			}
 			h.client = client
 
-			for {
-				message, err := h.ringBuffer.GetOne()
-				if err != nil {
-					break
-				}
+			available := h.ringBuffer.Length(false)
+			if available <= 0 {
+				log.Println("No messages to send")
+				break
+			}
+
+			message, err := h.ringBuffer.GetN(available)
+			if err != nil {
+				log.Println("Error getting messages from ring buffer", err)
+				break
+			}
+
+			for _, message := range message {
 				h.client.send <- message
 			}
 
