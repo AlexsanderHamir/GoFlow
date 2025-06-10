@@ -2,7 +2,9 @@ package simulator
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -29,11 +31,14 @@ type Simulator struct {
 
 // NewSimulator creates a new simulator instance
 func NewSimulator(ctx context.Context, cancel context.CancelFunc) *Simulator {
+	websocket.InitFrontend()
+	log.Println("Frontend initialized")
+
 	return &Simulator{
 		Ctx:      ctx,
 		Cancel:   cancel,
 		Quit:     make(chan struct{}),
-		wsServer: websocket.InitializeServer(),
+		wsServer: websocket.InitializeServer(ctx),
 	}
 }
 
@@ -85,6 +90,23 @@ func (s *Simulator) Start() error {
 		lastStage := i == len(s.Stages)-1
 		if lastStage {
 			stage.IsFinal = true
+		}
+
+		message := websocket.StageSetUp{
+			Type:        websocket.MessageTypeStageSetUp,
+			StageName:   stage.Name,
+			RoutineNum:  stage.Config.RoutineNum,
+			IsFinal:     lastStage,
+			IsGenerator: stage.Config.IsGenerator,
+		}
+
+		jsonData, err := json.Marshal(message)
+		if err != nil {
+			return fmt.Errorf("failed to marshal stage setup message: %w", err)
+		}
+
+		if err := s.wsServer.SendMessage(jsonData); err != nil {
+			log.Printf("error sending stage setup message: %v", err)
 		}
 
 		if err := stage.Start(s.Ctx, &s.Wg); err != nil {
