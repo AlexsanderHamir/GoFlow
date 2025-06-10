@@ -12,7 +12,7 @@ import (
 
 const (
 	// Time allowed to write a message to the peer.
-	writeWait = 2 * time.Second
+	writeWait = 10 * time.Second
 
 	// Time allowed to read the next pong message from the peer.
 	pongWait = 60 * time.Second
@@ -61,7 +61,8 @@ func (c *Client) writePump() {
 
 			log.Println("Sending message to client")
 			if err := c.conn.WriteMessage(websocket.BinaryMessage, message); err != nil {
-				return
+				log.Println("Error sending message to client", err)
+				continue
 			}
 			log.Println("Message sent to client")
 

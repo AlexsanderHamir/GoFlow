@@ -100,13 +100,8 @@ func (s *Simulator) Start() error {
 			IsGenerator: stage.Config.IsGenerator,
 		}
 
-		jsonData, err := json.Marshal(message)
-		if err != nil {
-			return fmt.Errorf("failed to marshal stage setup message: %w", err)
-		}
-
-		if err := s.wsServer.SendMessage(jsonData); err != nil {
-			log.Printf("error sending stage setup message: %v", err)
+		if err := s.SendMessage(message); err != nil {
+			return fmt.Errorf("failed to send stage setup message: %w", err)
 		}
 
 		if err := stage.Start(s.Ctx, &s.Wg); err != nil {
@@ -163,4 +158,13 @@ func (s *Simulator) PrintStats() {
 		}
 		fmt.Println("===================")
 	}
+}
+
+// send message to frontend
+func (s *Simulator) SendMessage(message any) error {
+	jsonData, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("failed to marshal message: %w", err)
+	}
+	return s.wsServer.SendMessage(jsonData)
 }

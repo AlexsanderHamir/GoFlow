@@ -5,23 +5,34 @@ import (
 	"log"
 	"time"
 
+	"github.com/AlexsanderHamir/ringbuffer"
+	"github.com/AlexsanderHamir/ringbuffer/config"
 	"github.com/gorilla/websocket"
 )
 
 type Server struct {
-	client       *Client
-	register     chan *Client
-	unregister   chan *Client
-	done         chan struct{}
-	messageQueue [][]byte
+	client     *Client
+	register   chan *Client
+	unregister chan *Client
+	done       chan struct{}
+	ringBuffer *ringbuffer.RingBuffer[[]byte]
 }
 
 func NewServer() *Server {
+	config := config.RingBufferConfig[[]byte]{
+		Block: true,
+	}
+
+	ringBuffer, err := ringbuffer.NewWithConfig(1000, &config)
+	if err != nil {
+		log.Fatalf("Failed to create ring buffer: %v", err)
+	}
+
 	return &Server{
-		register:     make(chan *Client),
-		unregister:   make(chan *Client),
-		done:         make(chan struct{}),
-		messageQueue: make([][]byte, 0),
+		register:   make(chan *Client),
+		unregister: make(chan *Client),
+		done:       make(chan struct{}),
+		ringBuffer: ringBuffer,
 	}
 }
 
@@ -40,9 +51,14 @@ func (h *Server) Run() {
 			}
 			h.client = client
 
-			for _, message := range h.messageQueue {
+			for {
+				message, err := h.ringBuffer.GetOne()
+				if err != nil {
+					break
+				}
 				h.client.send <- message
 			}
+
 		case client := <-h.unregister:
 			if h.client == client {
 				close(h.client.send)
@@ -82,7 +98,8 @@ func (h *Server) GetActiveClient() (*Client, error) {
 func (h *Server) SendMessage(message []byte) error {
 	if h.client == nil {
 		log.Println("Client not connected, adding message to queue")
-		h.messageQueue = append(h.messageQueue, message)
+		h.ringBuffer.Write(message)
+		log.Println("Message added to queue")
 		return nil
 	}
 

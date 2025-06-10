@@ -4,25 +4,29 @@ function App() {
   const [messages, setMessages] = useState([]);
 
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8080/ws");
+    const timer = setTimeout(() => {
+      const ws = new WebSocket("ws://localhost:8080/ws");
 
-    ws.onopen = () => console.log("WebSocket connected");
+      ws.onopen = () => console.log("WebSocket connected");
 
-    ws.onmessage = async (event) => {
-      try {
-        const text = await event.data.text();
-        const parsed = JSON.parse(text);
-        console.log(parsed);
-        setMessages((prev) => [...prev, parsed]);
-      } catch (e) {
-        console.error("Failed to parse message:", e);
-      }
-    };
+      ws.onmessage = async (event) => {
+        try {
+          const text = await event.data.text();
+          const parsed = JSON.parse(text);
+          console.log(parsed);
+          setMessages((prev) => [...prev, parsed]);
+        } catch (e) {
+          console.error("Failed to parse message:", e);
+        }
+      };
 
-    ws.onclose = () => console.log("WebSocket disconnected");
-    ws.onerror = (error) => console.error("WebSocket error:", error);
+      ws.onclose = () => console.log("WebSocket disconnected");
+      ws.onerror = (error) => console.error("WebSocket error:", error);
 
-    return () => ws.close();
+      return () => ws.close();
+    }, 1); // 1 millisecond delay
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
