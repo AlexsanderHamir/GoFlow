@@ -119,20 +119,46 @@ func (s *Simulator) GetStages() []*Stage {
 	return s.Stages
 }
 
+// getIntMetric safely retrieves an integer metric, returning 0 if nil
+func getIntMetric(stats map[string]interface{}, key string) uint64 {
+	if val, ok := stats[key]; ok && val != nil {
+		if intVal, ok := val.(uint64); ok {
+			return intVal
+		}
+	}
+	return 0
+}
+
+// getFloatMetric safely retrieves a float metric, returning 0.0 if nil
+func getFloatMetric(stats map[string]interface{}, key string) float64 {
+	if val, ok := stats[key]; ok && val != nil {
+		if floatVal, ok := val.(float64); ok {
+			return floatVal
+		}
+	}
+	return 0.0
+}
+
 func (s *Simulator) PrintStats() {
 	for _, stage := range s.GetStages() {
-		fmt.Printf("\n=== Stage: %s ===\n", stage.Name)
 		stats := stage.GetMetrics().GetStats()
-		if !stage.Config.IsGenerator {
-			fmt.Printf("Performance Metrics:\n")
-			fmt.Printf("  • Processed Items: %d\n", stats["processed_items"])
-			fmt.Printf("  • Throughput: %.2f items/sec\n", stats["throughput"])
-			fmt.Printf("  • Drop Rate: %.2f%%\n", stats["drop_rate"].(float64)*100)
-			fmt.Printf("  • Dropped Items: %d\n", stats["dropped_items"])
-		} else {
-			fmt.Printf("  • Generated Items: %d\n", stats["generated_items"])
-			fmt.Printf("  • Dropped Items: %d\n", stats["dropped_items"])
-			fmt.Printf("  • Drop Rate: %.2f%%\n", stats["drop_rate"].(float64)*100)
+
+		processedItems := getIntMetric(stats, "processed_items")
+		outputItems := getIntMetric(stats, "output_items")
+		droppedItems := getIntMetric(stats, "dropped_items")
+		dropRate := getFloatMetric(stats, "drop_rate") * 100
+		generatedItems := getIntMetric(stats, "generated_items")
+		throughput := getFloatMetric(stats, "throughput")
+
+		fmt.Printf("\n=== Stage: %s ===\n", stage.Name)
+		fmt.Printf("Performance Metrics:\n")
+		fmt.Printf("  • Processed Items: %d\n", processedItems)
+		fmt.Printf("  • Output Items: %d\n", outputItems)
+		fmt.Printf("  • Throughput: %.2f items/sec\n", throughput)
+		fmt.Printf("  • Dropped Items: %d\n", droppedItems)
+		fmt.Printf("  • Drop Rate: %.2f%%\n", dropRate)
+		if stage.Config.IsGenerator {
+			fmt.Printf("  • Generated Items: %d\n", generatedItems)
 		}
 		fmt.Println("===================")
 	}

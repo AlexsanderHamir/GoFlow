@@ -21,8 +21,8 @@ func main() {
 	// Create configuration for stages
 	generatorConfig := &simulator.StageConfig{
 		InputRate:   100 * time.Millisecond,
-		RoutineNum:  10,
-		BufferSize:  1000,
+		RoutineNum:  100,
+		BufferSize:  5000,
 		IsGenerator: true,
 		ItemGenerator: func() any {
 			return rand.Intn(100)
@@ -32,7 +32,7 @@ func main() {
 
 	globalConfig := &simulator.StageConfig{
 		RoutineNum: 100,
-		BufferSize: 1000,
+		BufferSize: 5000,
 		Ctx:        ctx,
 	}
 
@@ -60,21 +60,21 @@ func main() {
 
 	stage5 := simulator.NewStage("Stage-4", globalConfig)
 	stage5.Config.WorkerFunc = func(item any) (any, error) {
-		time.Sleep(150 * time.Millisecond)
+		time.Sleep(200 * time.Millisecond)
 		item = item.(int) + rand.Intn(100)
 		return item, nil
 	}
 
 	stage6 := simulator.NewStage("Stage-5", globalConfig)
 	stage6.Config.WorkerFunc = func(item any) (any, error) {
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		item = item.(int) + rand.Intn(100)
 		return item, nil
 	}
 
 	stage7 := simulator.NewStage("Stage-6", globalConfig)
 	stage7.Config.WorkerFunc = func(item any) (any, error) {
-		time.Sleep(250 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 		item = item.(int) + rand.Intn(100)
 		return item, nil
 	}
