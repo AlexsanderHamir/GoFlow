@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/AlexsanderHamir/GoFlow/pkg/websocket"
 )
 
 // Simulator represents a concurrent pipeline simulator
@@ -21,14 +23,17 @@ type Simulator struct {
 	Cancel context.CancelFunc
 	Quit   chan struct{} // Channel to signal simulation completion
 	Wg     sync.WaitGroup
+
+	wsServer *websocket.Server
 }
 
 // NewSimulator creates a new simulator instance
 func NewSimulator(ctx context.Context, cancel context.CancelFunc) *Simulator {
 	return &Simulator{
-		Ctx:    ctx,
-		Cancel: cancel,
-		Quit:   make(chan struct{}),
+		Ctx:      ctx,
+		Cancel:   cancel,
+		Quit:     make(chan struct{}),
+		wsServer: websocket.InitializeServer(),
 	}
 }
 
