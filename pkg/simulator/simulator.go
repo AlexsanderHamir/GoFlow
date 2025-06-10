@@ -2,13 +2,9 @@ package simulator
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"log"
 	"sync"
 	"time"
-
-	"github.com/AlexsanderHamir/GoFlow/pkg/websocket"
 )
 
 // Simulator represents a concurrent pipeline simulator
@@ -25,20 +21,14 @@ type Simulator struct {
 	Cancel context.CancelFunc
 	Quit   chan struct{} // Channel to signal simulation completion
 	Wg     sync.WaitGroup
-
-	wsServer *websocket.Server
 }
 
 // NewSimulator creates a new simulator instance
 func NewSimulator(ctx context.Context, cancel context.CancelFunc) *Simulator {
-	websocket.InitFrontend()
-	log.Println("Frontend initialized")
-
 	return &Simulator{
-		Ctx:      ctx,
-		Cancel:   cancel,
-		Quit:     make(chan struct{}),
-		wsServer: websocket.InitializeServer(ctx),
+		Ctx:    ctx,
+		Cancel: cancel,
+		Quit:   make(chan struct{}),
 	}
 }
 
@@ -90,18 +80,6 @@ func (s *Simulator) Start() error {
 		lastStage := i == len(s.Stages)-1
 		if lastStage {
 			stage.IsFinal = true
-		}
-
-		message := websocket.StageSetUp{
-			Type:        websocket.MessageTypeStageSetUp,
-			StageName:   stage.Name,
-			RoutineNum:  stage.Config.RoutineNum,
-			IsFinal:     lastStage,
-			IsGenerator: stage.Config.IsGenerator,
-		}
-
-		if err := s.SendMessage(message); err != nil {
-			return fmt.Errorf("failed to send stage setup message: %w", err)
 		}
 
 		if err := stage.Start(s.Ctx, &s.Wg); err != nil {
@@ -158,13 +136,4 @@ func (s *Simulator) PrintStats() {
 		}
 		fmt.Println("===================")
 	}
-}
-
-// send message to frontend
-func (s *Simulator) SendMessage(message any) error {
-	jsonData, err := json.Marshal(message)
-	if err != nil {
-		return fmt.Errorf("failed to marshal message: %w", err)
-	}
-	return s.wsServer.SendMessage(jsonData)
 }

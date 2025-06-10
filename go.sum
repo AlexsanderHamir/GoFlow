@@ -1,8 +1,2 @@
-github.com/AlexsanderHamir/IdleSpy v1.0.0 h1:rFlfszs/ziywSaA3Ww30fYiet7fQT123A69MXBwhR+g=
-github.com/AlexsanderHamir/IdleSpy v1.0.0/go.mod h1:l/vu9BlF9cHSqIL0k1HbZHDNnbUlbUlMy+qf9waqwSM=
 github.com/AlexsanderHamir/IdleSpy v1.0.1 h1:PN8un1p0MsXlMRZdsavM2aUzh/XMGIdWmzB0F19fsJI=
 github.com/AlexsanderHamir/IdleSpy v1.0.1/go.mod h1:l/vu9BlF9cHSqIL0k1HbZHDNnbUlbUlMy+qf9waqwSM=
-github.com/AlexsanderHamir/ringbuffer v0.3.2 h1:qPpfbucr6OCTn/LFx29CnunEYK8BzULyNyYmIGcIwnU=
-github.com/AlexsanderHamir/ringbuffer v0.3.2/go.mod h1:UpBAfNTdQ9cjARbBdiMEOJwkQFHCmgjR83L++Q0Y2UI=
-github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=
-github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
