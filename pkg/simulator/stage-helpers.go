@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/AlexsanderHamir/IdleSpy/tracker"
 )
 
 // processBurst handles sending a burst of items to the output channel
@@ -47,7 +49,7 @@ func (s *Stage) shouldExecuteBurst(burstCount int, lastBurstTime time.Time) bool
 }
 
 // processRegularGeneration handles the regular item generation flow
-func (s *Stage) processRegularGeneration() {
+func (s *Stage) processRegularGeneration(id tracker.GoroutineId, startTime time.Time) {
 	defer func() {
 		if r := recover(); r != nil {
 			s.Metrics.RecordDropped()
@@ -67,14 +69,17 @@ func (s *Stage) processRegularGeneration() {
 	select {
 	case <-s.Config.Ctx.Done():
 		s.Metrics.RecordDropped()
+		s.IdleSpy.TrackSelectCase(fmt.Sprintf("generator_process_regular_generation_%d_ctx_done", id), time.Since(startTime), id)
 		return
 	case s.Output <- item:
 		s.Metrics.RecordOutput()
+		s.IdleSpy.TrackSelectCase(fmt.Sprintf("generator_process_regular_generation_%d_output_select", id), time.Since(startTime), id)
 	default:
 		if s.Config.DropOnBackpressure {
 			s.Metrics.RecordDropped()
 		} else {
 			s.Output <- item
+			s.IdleSpy.TrackSelectCase(fmt.Sprintf("generator_process_regular_generation_%d_output_default", id), time.Since(startTime), id)
 			s.Metrics.RecordOutput()
 		}
 	}
@@ -91,7 +96,7 @@ func (s *Stage) processWorkerItem(item any) (any, error) {
 }
 
 // handleWorkerOutput manages sending the processed item to the output channel with backpressure handling
-func (s *Stage) handleWorkerOutput(result any) {
+func (s *Stage) handleWorkerOutput(result any, id tracker.GoroutineId, startTime time.Time) {
 	defer func() {
 		if r := recover(); r != nil {
 			s.Metrics.RecordDropped()
@@ -101,15 +106,19 @@ func (s *Stage) handleWorkerOutput(result any) {
 	select {
 	case <-s.Config.Ctx.Done():
 		s.Metrics.RecordDropped()
+		s.IdleSpy.TrackSelectCase(fmt.Sprintf("worker_%d_ctx_done", id), time.Since(startTime), id)
 		return
 	case s.Output <- result:
 		s.Metrics.RecordOutput()
+		s.IdleSpy.TrackSelectCase(fmt.Sprintf("worker_%d_output_select", id), time.Since(startTime), id)
 	default:
 		if s.Config.DropOnBackpressure {
 			s.Metrics.RecordDropped()
+			s.IdleSpy.TrackSelectCase(fmt.Sprintf("worker_%d_output_backpressure_default", id), time.Since(startTime), id)
 		} else {
 			s.Output <- result
 			s.Metrics.RecordOutput()
+			s.IdleSpy.TrackSelectCase(fmt.Sprintf("worker_%d_output_backpressure_selec_blocking", id), time.Since(startTime), id)
 		}
 	}
 }
