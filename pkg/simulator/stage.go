@@ -2,7 +2,6 @@ package simulator
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -59,14 +58,17 @@ func (s *Stage) generatorWorker(wg *sync.WaitGroup) {
 	lastBurstTime := time.Now()
 
 	id := s.IdleSpy.TrackGoroutineStart()
-	defer s.IdleSpy.TrackGoroutineEnd(id)
+
+	defer func() {
+		s.IdleSpy.TrackGoroutineEnd(id)
+		s.stageTermination(wg)
+	}()
 
 	for {
 		startTime := time.Now()
 		select {
 		case <-s.Config.Ctx.Done():
-			s.IdleSpy.TrackSelectCase(fmt.Sprintf("generator_%d_ctx_done", id), time.Since(startTime), id)
-			s.stageTermination(wg)
+			s.IdleSpy.TrackSelectCase("generator_ctx_done", time.Since(startTime), id)
 			return
 		default:
 			if s.MaxGeneratedItems > 0 && s.Metrics.GeneratedItems >= uint64(s.MaxGeneratedItems) {
@@ -74,9 +76,9 @@ func (s *Stage) generatorWorker(wg *sync.WaitGroup) {
 				continue
 			}
 
-			s.IdleSpy.TrackSelectCase(fmt.Sprintf("generator_%d_default", id), time.Since(startTime), id)
+			s.IdleSpy.TrackSelectCase("generator_default", time.Since(startTime), id)
 			if s.shouldExecuteBurst(burstCount, lastBurstTime) {
-				s.executeBurst(&burstCount, &lastBurstTime)
+				s.executeBurst(&burstCount, &lastBurstTime, id)
 				continue
 			}
 
@@ -100,14 +102,14 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 		startTime := time.Now()
 		select {
 		case <-s.Config.Ctx.Done():
-			s.IdleSpy.TrackSelectCase(fmt.Sprintf("worker_%d_ctx_done", id), time.Since(startTime), id)
+			s.IdleSpy.TrackSelectCase("worker_ctx_done", time.Since(startTime), id)
 			return
 		case item, ok := <-s.Input:
 			if !ok {
 				return
 			}
 
-			s.IdleSpy.TrackSelectCase(fmt.Sprintf("worker_%d_input_select", id), time.Since(startTime), id)
+			s.IdleSpy.TrackSelectCase("worker_input_select", time.Since(startTime), id)
 			result, err := s.processWorkerItem(item)
 			if err != nil {
 				s.Metrics.RecordDropped()

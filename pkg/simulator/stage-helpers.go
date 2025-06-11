@@ -9,7 +9,7 @@ import (
 )
 
 // processBurst handles sending a burst of items to the output channel
-func (s *Stage) processBurst(items []any) {
+func (s *Stage) processBurst(items []any, id tracker.GoroutineId) {
 	var processedItems int
 
 	defer func() {
@@ -19,20 +19,25 @@ func (s *Stage) processBurst(items []any) {
 	}()
 
 	for _, item := range items {
+		startTime := time.Now()
 		select {
 		case <-s.Config.Ctx.Done():
 			s.Metrics.RecordDroppedBurst(len(items) - processedItems)
+			s.IdleSpy.TrackSelectCase("burst_ctx_done", time.Since(startTime), id)
 			return
 		case s.Output <- item:
 			processedItems++
 			s.Metrics.RecordOutput()
+			s.IdleSpy.TrackSelectCase("burst_output_select", time.Since(startTime), id)
 		default:
 			if s.Config.DropOnBackpressure {
 				s.Metrics.RecordDropped()
+				s.IdleSpy.TrackSelectCase("burst_output_backpressure_default", time.Since(startTime), id)
 			} else {
 				s.Output <- item
 				processedItems++
 				s.Metrics.RecordOutput()
+				s.IdleSpy.TrackSelectCase("burst_output_default", time.Since(startTime), id)
 			}
 		}
 	}
@@ -69,17 +74,18 @@ func (s *Stage) processRegularGeneration(id tracker.GoroutineId, startTime time.
 	select {
 	case <-s.Config.Ctx.Done():
 		s.Metrics.RecordDropped()
-		s.IdleSpy.TrackSelectCase(fmt.Sprintf("generator_process_regular_generation_%d_ctx_done", id), time.Since(startTime), id)
+		s.IdleSpy.TrackSelectCase("generation_ctx_done", time.Since(startTime), id)
 		return
 	case s.Output <- item:
 		s.Metrics.RecordOutput()
-		s.IdleSpy.TrackSelectCase(fmt.Sprintf("generator_process_regular_generation_%d_output_select", id), time.Since(startTime), id)
+		s.IdleSpy.TrackSelectCase("generation_output_select", time.Since(startTime), id)
 	default:
 		if s.Config.DropOnBackpressure {
 			s.Metrics.RecordDropped()
+			s.IdleSpy.TrackSelectCase("generation_backpressure_default", time.Since(startTime), id)
 		} else {
 			s.Output <- item
-			s.IdleSpy.TrackSelectCase(fmt.Sprintf("generator_process_regular_generation_%d_output_default", id), time.Since(startTime), id)
+			s.IdleSpy.TrackSelectCase("generation_output_default", time.Since(startTime), id)
 			s.Metrics.RecordOutput()
 		}
 	}
@@ -106,19 +112,19 @@ func (s *Stage) handleWorkerOutput(result any, id tracker.GoroutineId, startTime
 	select {
 	case <-s.Config.Ctx.Done():
 		s.Metrics.RecordDropped()
-		s.IdleSpy.TrackSelectCase(fmt.Sprintf("worker_%d_ctx_done", id), time.Since(startTime), id)
+		s.IdleSpy.TrackSelectCase("worker_ctx_done", time.Since(startTime), id)
 		return
 	case s.Output <- result:
 		s.Metrics.RecordOutput()
-		s.IdleSpy.TrackSelectCase(fmt.Sprintf("worker_%d_output_select", id), time.Since(startTime), id)
+		s.IdleSpy.TrackSelectCase("worker_output_select", time.Since(startTime), id)
 	default:
 		if s.Config.DropOnBackpressure {
 			s.Metrics.RecordDropped()
-			s.IdleSpy.TrackSelectCase(fmt.Sprintf("worker_%d_output_backpressure_default", id), time.Since(startTime), id)
+			s.IdleSpy.TrackSelectCase("worker_backpressure_default", time.Since(startTime), id)
 		} else {
 			s.Output <- result
 			s.Metrics.RecordOutput()
-			s.IdleSpy.TrackSelectCase(fmt.Sprintf("worker_%d_output_backpressure_selec_blocking", id), time.Since(startTime), id)
+			s.IdleSpy.TrackSelectCase("worker_output_default", time.Since(startTime), id)
 		}
 	}
 }
@@ -193,16 +199,17 @@ func (s *Stage) stageTermination(wg *sync.WaitGroup) {
 	case s.Sem <- struct{}{}:
 		close(s.Output)
 		s.Metrics.Stop()
+		tracker.SaveStats(s.IdleSpy.Stats, fmt.Sprintf("stage_%s.txt", s.Name))
 	default:
 	}
 
 	wg.Done()
 }
 
-func (s *Stage) executeBurst(burstCount *int, lastBurstTime *time.Time) {
+func (s *Stage) executeBurst(burstCount *int, lastBurstTime *time.Time, id tracker.GoroutineId) {
 	items := s.Config.InputBurst()
 	s.Metrics.RecordGeneratedBurst(len(items))
-	s.processBurst(items)
+	s.processBurst(items, id)
 	*burstCount++
 	*lastBurstTime = time.Now()
 }
