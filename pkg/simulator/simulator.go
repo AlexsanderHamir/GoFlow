@@ -114,6 +114,19 @@ func (s *Simulator) Done() <-chan struct{} {
 	return s.Quit
 }
 
+func (s *Simulator) WaitForVisualization() error {
+	<-s.Done()
+
+	err := s.SaveStats()
+	if err != nil {
+		return fmt.Errorf("failed to save stats: %w", err)
+	}
+
+	StartStaticServer(8080)
+
+	return nil
+}
+
 // GetStages returns a copy of the stages slice
 func (s *Simulator) GetStages() []*Stage {
 	s.Mu.RLock()
