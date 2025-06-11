@@ -180,9 +180,16 @@ type StageStats struct {
 
 // SaveStats saves the statistics of each stage to a separate JSON file
 func (s *Simulator) SaveStats(outputDir string) error {
-	// Create output directory if it doesn't exist
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return fmt.Errorf("failed to create output directory: %w", err)
+	// Create static directory if it doesn't exist
+	staticDir := "static"
+	if err := os.MkdirAll(staticDir, 0755); err != nil {
+		return fmt.Errorf("failed to create static directory: %w", err)
+	}
+
+	// Create stage directory under static if it doesn't exist
+	stageDir := filepath.Join(staticDir, "stages")
+	if err := os.MkdirAll(stageDir, 0755); err != nil {
+		return fmt.Errorf("failed to create stages directory: %w", err)
 	}
 
 	for _, stage := range s.GetStages() {
@@ -207,8 +214,8 @@ func (s *Simulator) SaveStats(outputDir string) error {
 			return fmt.Errorf("failed to marshal stats for stage %s: %w", stage.Name, err)
 		}
 
-		// Create or truncate the stats file
-		filename := filepath.Join(outputDir, fmt.Sprintf("stage_%s_stats.json", stage.Name))
+		// Create or truncate the stats file in the stages directory
+		filename := filepath.Join(stageDir, fmt.Sprintf("stage_%s_stats.json", stage.Name))
 		if err := os.WriteFile(filename, jsonData, 0644); err != nil {
 			return fmt.Errorf("failed to write stats file for stage %s: %w", stage.Name, err)
 		}
