@@ -199,7 +199,7 @@ func (s *Stage) stageTermination(wg *sync.WaitGroup) {
 	case s.Sem <- struct{}{}:
 		close(s.Output)
 		s.Metrics.Stop()
-		tracker.SaveStats(s.IdleSpy.Stats, fmt.Sprintf("stage_%s.txt", s.Name))
+		tracker.SaveStats(s.IdleSpy.Stats, fmt.Sprintf("goroutine_info_%s", s.Name))
 	default:
 	}
 

@@ -1,8 +1,11 @@
 package simulator
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -162,4 +165,81 @@ func (s *Simulator) PrintStats() {
 		}
 		fmt.Println("===================")
 	}
+}
+
+// SaveStageStats saves each stage's statistics to a separate file
+func (s *Simulator) SaveStageStats() error {
+	for _, stage := range s.GetStages() {
+		stats := stage.GetMetrics().GetStats()
+
+		// Create file for this stage
+		filename := fmt.Sprintf("stage_info_%s.txt", stage.Name)
+		file, err := os.Create(filename)
+		if err != nil {
+			return fmt.Errorf("failed to create stats file for stage %s: %w", stage.Name, err)
+		}
+		defer file.Close()
+
+		// Write stats to file
+		fmt.Fprintf(file, "=== Stage: %s ===\n", stage.Name)
+		fmt.Fprintf(file, "Performance Metrics:\n")
+		fmt.Fprintf(file, "  • Processed Items: %d\n", getIntMetric(stats, "processed_items"))
+		fmt.Fprintf(file, "  • Output Items: %d\n", getIntMetric(stats, "output_items"))
+		fmt.Fprintf(file, "  • Throughput: %.2f items/sec\n", getFloatMetric(stats, "throughput"))
+		fmt.Fprintf(file, "  • Dropped Items: %d\n", getIntMetric(stats, "dropped_items"))
+		fmt.Fprintf(file, "  • Drop Rate: %.2f%%\n", getFloatMetric(stats, "drop_rate")*100)
+		if stage.Config.IsGenerator {
+			fmt.Fprintf(file, "  • Generated Items: %d\n", getIntMetric(stats, "generated_items"))
+		}
+		fmt.Fprintf(file, "===================\n")
+	}
+
+	return nil
+}
+
+// SaveStats saves the statistics of each stage to a separate file
+func (s *Simulator) SaveStats(outputDir string) error {
+	// Create output directory if it doesn't exist
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	for _, stage := range s.GetStages() {
+		stats := stage.GetMetrics().GetStats()
+
+		processedItems := getIntMetric(stats, "processed_items")
+		outputItems := getIntMetric(stats, "output_items")
+		droppedItems := getIntMetric(stats, "dropped_items")
+		dropRate := getFloatMetric(stats, "drop_rate") * 100
+		generatedItems := getIntMetric(stats, "generated_items")
+		throughput := getFloatMetric(stats, "throughput")
+
+		// Create or truncate the stats file
+		filename := filepath.Join(outputDir, fmt.Sprintf("stage_%s_stats.txt", stage.Name))
+		file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		if err != nil {
+			return fmt.Errorf("failed to create/truncate stats file for stage %s: %w", stage.Name, err)
+		}
+		defer file.Close()
+
+		// Write stats to file
+		writer := bufio.NewWriter(file)
+		fmt.Fprintf(writer, "=== Stage: %s ===\n", stage.Name)
+		fmt.Fprintf(writer, "Performance Metrics:\n")
+		fmt.Fprintf(writer, "  • Processed Items: %d\n", processedItems)
+		fmt.Fprintf(writer, "  • Output Items: %d\n", outputItems)
+		fmt.Fprintf(writer, "  • Throughput: %.2f items/sec\n", throughput)
+		fmt.Fprintf(writer, "  • Dropped Items: %d\n", droppedItems)
+		fmt.Fprintf(writer, "  • Drop Rate: %.2f%%\n", dropRate)
+		if stage.Config.IsGenerator {
+			fmt.Fprintf(writer, "  • Generated Items: %d\n", generatedItems)
+		}
+		fmt.Fprintf(writer, "===================\n")
+
+		if err := writer.Flush(); err != nil {
+			return fmt.Errorf("failed to write stats for stage %s: %w", stage.Name, err)
+		}
+	}
+
+	return nil
 }

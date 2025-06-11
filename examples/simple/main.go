@@ -86,7 +86,7 @@ func main() {
 		return item, nil
 	}
 
-	stage9 := simulator.NewStage("Stage-8", globalConfig)
+	stage9 := simulator.NewStage("DummyStage-8", globalConfig)
 	stage9.Config.WorkerFunc = func(item any) (any, error) {
 		time.Sleep(350 * time.Millisecond)
 		item = item.(int) + rand.Intn(100)
@@ -109,5 +109,5 @@ func main() {
 
 	<-sim.Done()
 
-	sim.PrintStats()
+	sim.SaveStats("stage")
 }

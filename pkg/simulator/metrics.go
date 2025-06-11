@@ -72,6 +72,11 @@ func (m *StageMetrics) GetStats() map[string]any {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	duration := m.EndTime.Sub(m.StartTime)
+	if m.EndTime.IsZero() {
+		duration = time.Since(m.StartTime)
+	}
+
 	// For generator stages, return only generator-specific metrics
 	if atomic.LoadUint64(&m.GeneratedItems) > 0 {
 		return map[string]any{
@@ -79,6 +84,7 @@ func (m *StageMetrics) GetStats() map[string]any {
 			"drop_rate":       float64(atomic.LoadUint64(&m.DroppedItems)) / float64(atomic.LoadUint64(&m.GeneratedItems)),
 			"dropped_items":   atomic.LoadUint64(&m.DroppedItems),
 			"output_items":    atomic.LoadUint64(&m.OutputItems),
+			"throughput":      float64(atomic.LoadUint64(&m.OutputItems)) / duration.Seconds(),
 		}
 	}
 
@@ -92,11 +98,6 @@ func (m *StageMetrics) GetStats() map[string]any {
 			"throughput":      0.0,
 			"output_items":    0,
 		}
-	}
-
-	duration := m.EndTime.Sub(m.StartTime)
-	if m.EndTime.IsZero() {
-		duration = time.Since(m.StartTime)
 	}
 
 	return map[string]any{
