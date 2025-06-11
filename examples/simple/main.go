@@ -109,5 +109,5 @@ func main() {
 
 	<-sim.Done()
 
-	sim.SaveStats("stage")
+	sim.SaveStats()
 }

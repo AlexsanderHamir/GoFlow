@@ -179,7 +179,7 @@ type StageStats struct {
 }
 
 // SaveStats saves the statistics of each stage to a separate JSON file
-func (s *Simulator) SaveStats(outputDir string) error {
+func (s *Simulator) SaveStats() error {
 	// Create static directory if it doesn't exist
 	staticDir := "static"
 	if err := os.MkdirAll(staticDir, 0755); err != nil {
