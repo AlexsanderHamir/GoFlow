@@ -58,8 +58,48 @@ func (s *Simulator) AddStage(stage *Stage) error {
 	return nil
 }
 
+// cleanStaticDirectory removes all directories inside the static directory
+func (s *Simulator) cleanStaticDirectory() error {
+	// Get the absolute path of the current working directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current working directory: %w", err)
+	}
+
+	// Create the absolute path for the static directory
+	staticDir := filepath.Join(cwd, "static")
+
+	// Ensure the static directory exists
+	if _, err := os.Stat(staticDir); os.IsNotExist(err) {
+		return fmt.Errorf("static directory %s does not exist", staticDir)
+	}
+
+	// Read all entries in the static directory
+	entries, err := os.ReadDir(staticDir)
+	if err != nil {
+		return fmt.Errorf("failed to read static directory: %w", err)
+	}
+
+	// Remove each directory
+	for _, entry := range entries {
+		if entry.IsDir() {
+			dirPath := filepath.Join(staticDir, entry.Name())
+			if err := os.RemoveAll(dirPath); err != nil {
+				return fmt.Errorf("failed to remove directory %s: %w", dirPath, err)
+			}
+		}
+	}
+
+	return nil
+}
+
 // Start begins the simulation
 func (s *Simulator) Start() error {
+	// Clean the static directory before starting
+	if err := s.cleanStaticDirectory(); err != nil {
+		return fmt.Errorf("failed to clean static directory: %w", err)
+	}
+
 	s.Mu.RLock()
 	defer s.Mu.RUnlock()
 
@@ -120,6 +160,11 @@ func (s *Simulator) WaitForVisualization() error {
 	err := s.SaveStats()
 	if err != nil {
 		return fmt.Errorf("failed to save stats: %w", err)
+	}
+
+	err = StartFrontend()
+	if err != nil {
+		return fmt.Errorf("failed to start frontend: %w", err)
 	}
 
 	StartStaticServer(8080)
