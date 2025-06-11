@@ -1,8 +1,8 @@
 package simulator
 
 import (
-	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -123,7 +123,7 @@ func (s *Simulator) GetStages() []*Stage {
 }
 
 // getIntMetric safely retrieves an integer metric, returning 0 if nil
-func getIntMetric(stats map[string]interface{}, key string) uint64 {
+func getIntMetric(stats map[string]any, key string) uint64 {
 	if val, ok := stats[key]; ok && val != nil {
 		if intVal, ok := val.(uint64); ok {
 			return intVal
@@ -133,7 +133,7 @@ func getIntMetric(stats map[string]interface{}, key string) uint64 {
 }
 
 // getFloatMetric safely retrieves a float metric, returning 0.0 if nil
-func getFloatMetric(stats map[string]interface{}, key string) float64 {
+func getFloatMetric(stats map[string]any, key string) float64 {
 	if val, ok := stats[key]; ok && val != nil {
 		if floatVal, ok := val.(float64); ok {
 			return floatVal
@@ -167,37 +167,18 @@ func (s *Simulator) PrintStats() {
 	}
 }
 
-// SaveStageStats saves each stage's statistics to a separate file
-func (s *Simulator) SaveStageStats() error {
-	for _, stage := range s.GetStages() {
-		stats := stage.GetMetrics().GetStats()
-
-		// Create file for this stage
-		filename := fmt.Sprintf("stage_info_%s.txt", stage.Name)
-		file, err := os.Create(filename)
-		if err != nil {
-			return fmt.Errorf("failed to create stats file for stage %s: %w", stage.Name, err)
-		}
-		defer file.Close()
-
-		// Write stats to file
-		fmt.Fprintf(file, "=== Stage: %s ===\n", stage.Name)
-		fmt.Fprintf(file, "Performance Metrics:\n")
-		fmt.Fprintf(file, "  • Processed Items: %d\n", getIntMetric(stats, "processed_items"))
-		fmt.Fprintf(file, "  • Output Items: %d\n", getIntMetric(stats, "output_items"))
-		fmt.Fprintf(file, "  • Throughput: %.2f items/sec\n", getFloatMetric(stats, "throughput"))
-		fmt.Fprintf(file, "  • Dropped Items: %d\n", getIntMetric(stats, "dropped_items"))
-		fmt.Fprintf(file, "  • Drop Rate: %.2f%%\n", getFloatMetric(stats, "drop_rate")*100)
-		if stage.Config.IsGenerator {
-			fmt.Fprintf(file, "  • Generated Items: %d\n", getIntMetric(stats, "generated_items"))
-		}
-		fmt.Fprintf(file, "===================\n")
-	}
-
-	return nil
+// StageStats represents the statistics for a single stage
+type StageStats struct {
+	StageName      string  `json:"stage_name"`
+	ProcessedItems uint64  `json:"processed_items"`
+	OutputItems    uint64  `json:"output_items"`
+	Throughput     float64 `json:"throughput"`
+	DroppedItems   uint64  `json:"dropped_items"`
+	DropRate       float64 `json:"drop_rate"`
+	GeneratedItems uint64  `json:"generated_items,omitempty"`
 }
 
-// SaveStats saves the statistics of each stage to a separate file
+// SaveStats saves the statistics of each stage to a separate JSON file
 func (s *Simulator) SaveStats(outputDir string) error {
 	// Create output directory if it doesn't exist
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
@@ -207,37 +188,29 @@ func (s *Simulator) SaveStats(outputDir string) error {
 	for _, stage := range s.GetStages() {
 		stats := stage.GetMetrics().GetStats()
 
-		processedItems := getIntMetric(stats, "processed_items")
-		outputItems := getIntMetric(stats, "output_items")
-		droppedItems := getIntMetric(stats, "dropped_items")
-		dropRate := getFloatMetric(stats, "drop_rate") * 100
-		generatedItems := getIntMetric(stats, "generated_items")
-		throughput := getFloatMetric(stats, "throughput")
+		stageStats := StageStats{
+			StageName:      stage.Name,
+			ProcessedItems: getIntMetric(stats, "processed_items"),
+			OutputItems:    getIntMetric(stats, "output_items"),
+			Throughput:     getFloatMetric(stats, "throughput"),
+			DroppedItems:   getIntMetric(stats, "dropped_items"),
+			DropRate:       getFloatMetric(stats, "drop_rate") * 100,
+		}
+
+		if stage.Config.IsGenerator {
+			stageStats.GeneratedItems = getIntMetric(stats, "generated_items")
+		}
+
+		// Marshal stats to JSON
+		jsonData, err := json.MarshalIndent(stageStats, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal stats for stage %s: %w", stage.Name, err)
+		}
 
 		// Create or truncate the stats file
-		filename := filepath.Join(outputDir, fmt.Sprintf("stage_%s_stats.txt", stage.Name))
-		file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-		if err != nil {
-			return fmt.Errorf("failed to create/truncate stats file for stage %s: %w", stage.Name, err)
-		}
-		defer file.Close()
-
-		// Write stats to file
-		writer := bufio.NewWriter(file)
-		fmt.Fprintf(writer, "=== Stage: %s ===\n", stage.Name)
-		fmt.Fprintf(writer, "Performance Metrics:\n")
-		fmt.Fprintf(writer, "  • Processed Items: %d\n", processedItems)
-		fmt.Fprintf(writer, "  • Output Items: %d\n", outputItems)
-		fmt.Fprintf(writer, "  • Throughput: %.2f items/sec\n", throughput)
-		fmt.Fprintf(writer, "  • Dropped Items: %d\n", droppedItems)
-		fmt.Fprintf(writer, "  • Drop Rate: %.2f%%\n", dropRate)
-		if stage.Config.IsGenerator {
-			fmt.Fprintf(writer, "  • Generated Items: %d\n", generatedItems)
-		}
-		fmt.Fprintf(writer, "===================\n")
-
-		if err := writer.Flush(); err != nil {
-			return fmt.Errorf("failed to write stats for stage %s: %w", stage.Name, err)
+		filename := filepath.Join(outputDir, fmt.Sprintf("stage_%s_stats.json", stage.Name))
+		if err := os.WriteFile(filename, jsonData, 0644); err != nil {
+			return fmt.Errorf("failed to write stats file for stage %s: %w", stage.Name, err)
 		}
 	}
 
