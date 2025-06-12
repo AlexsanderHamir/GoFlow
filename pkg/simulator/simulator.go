@@ -70,9 +70,9 @@ func (s *Simulator) cleanStaticDirectory() error {
 	// Create the absolute path for the static directory
 	staticDir := filepath.Join(cwd, "static")
 
-	// Ensure the static directory exists
-	if _, err := os.Stat(staticDir); os.IsNotExist(err) {
-		return fmt.Errorf("static directory %s does not exist", staticDir)
+	// Create the static directory if it doesn't exist
+	if err := os.MkdirAll(staticDir, 0755); err != nil {
+		return fmt.Errorf("failed to create static directory: %w", err)
 	}
 
 	// Read all entries in the static directory
