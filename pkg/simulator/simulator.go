@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/AlexsanderHamir/GoFlow/pkg/visualizer"
 )
 
 // Simulator represents a concurrent pipeline simulator
@@ -162,12 +164,10 @@ func (s *Simulator) WaitForVisualization() error {
 		return fmt.Errorf("failed to save stats: %w", err)
 	}
 
-	err = StartFrontend()
+	err = visualizer.VisualizeStageStats("static/stages")
 	if err != nil {
-		return fmt.Errorf("failed to start frontend: %w", err)
+		return fmt.Errorf("failed to visualize stage stats: %w", err)
 	}
-
-	StartStaticServer(8080)
 
 	return nil
 }

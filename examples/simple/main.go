@@ -86,8 +86,8 @@ func main() {
 		return item, nil
 	}
 
-	stage9 := simulator.NewStage("DummyStage-8", globalConfig)
-	stage9.Config.WorkerFunc = func(item any) (any, error) {
+	DummyStage := simulator.NewStage("DummyStage", globalConfig)
+	DummyStage.Config.WorkerFunc = func(item any) (any, error) {
 		time.Sleep(350 * time.Millisecond)
 		item = item.(int) + rand.Intn(100)
 		return item, nil
@@ -101,7 +101,7 @@ func main() {
 	sim.AddStage(stage6)
 	sim.AddStage(stage7)
 	sim.AddStage(stage8)
-	sim.AddStage(stage9)
+	sim.AddStage(DummyStage)
 
 	if err := sim.Start(); err != nil {
 		log.Fatalf("Failed to start simulator: %v", err)
