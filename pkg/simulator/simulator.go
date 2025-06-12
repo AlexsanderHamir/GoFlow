@@ -70,6 +70,10 @@ func (s *Simulator) Start() error {
 	}
 
 	go func() {
+		if s.MaxGeneratedItems > 0 && s.Duration > 0 {
+			panic("either duration or max generated items must be set, not both")
+		}
+
 		durationActive := s.MaxGeneratedItems <= 0 && s.Duration > 0
 		if durationActive {
 			time.Sleep(s.Duration)
