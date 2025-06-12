@@ -52,6 +52,7 @@ func (s *Stage) Start(ctx context.Context, wg *sync.WaitGroup) error {
 	return nil
 }
 
+// generatorWorker is the worker for generators
 func (s *Stage) generatorWorker(wg *sync.WaitGroup) {
 	defer s.stageTermination(wg)
 
@@ -78,12 +79,11 @@ func (s *Stage) generatorWorker(wg *sync.WaitGroup) {
 	}
 }
 
-// worker processes items from the input channel
+// worker is the worker for normal stages
 func (s *Stage) worker(wg *sync.WaitGroup) {
 	defer s.stageTermination(wg)
 
 	for {
-		startTime := time.Now()
 		select {
 		case <-s.Config.Ctx.Done():
 			return
@@ -99,7 +99,7 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 			}
 
 			if !s.IsFinal {
-				s.handleWorkerOutput(result, startTime)
+				s.handleWorkerOutput(result)
 			} else {
 				s.Metrics.RecordDropped()
 			}

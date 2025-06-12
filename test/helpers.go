@@ -121,3 +121,4 @@ func CreateConfigsAndSimulatorBurst() (*simulator.StageConfig, *simulator.StageC
 
 	return generatorConfig, globalConfig, sim
 }
+
