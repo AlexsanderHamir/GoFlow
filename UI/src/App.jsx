@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import StageBar from "./components/rawStageBar/rawstagebar";
 import "./App.css";
 
 function App() {
@@ -82,6 +83,7 @@ function App() {
         </button>
 
         {error && <p className="error">Error: {error}</p>}
+          <StageBar stageData={stagesFilesData} />
       </div>
     </>
   );
