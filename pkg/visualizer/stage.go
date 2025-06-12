@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -60,9 +61,7 @@ func VisualizeStageStats(stagesDir string) error {
 		return fmt.Errorf("failed to read stage stats: %w", err)
 	}
 
-	// Calculate throughput and processed items differences
 	for i := 1; i < len(stats); i++ {
-		// Skip calculation for Generator and DummyStage
 		if stats[i].StageName == "Generator" || stats[i].StageName == "DummyStage" ||
 			stats[i-1].StageName == "Generator" || stats[i-1].StageName == "DummyStage" {
 			continue
@@ -75,12 +74,10 @@ func VisualizeStageStats(stagesDir string) error {
 		}
 	}
 
-	// Print header
 	fmt.Printf("\n%-20s %12s %12s %12s %12s %12s %12s %12s\n",
 		"Stage", "Processed", "Output", "Throughput", "Dropped", "Drop Rate %", "Proc Δ%", "Thru Δ%")
 	fmt.Println(strings.Repeat("-", 114))
 
-	// Print each row
 	for _, stat := range stats {
 		thruDiffStr := "-"
 		if stat.ThruDiffPct != 0 {
@@ -102,5 +99,18 @@ func VisualizeStageStats(stagesDir string) error {
 	}
 	fmt.Println()
 
+	return nil
+}
+
+func VisualizeStageGoroutines(fileLocation string, chartType string) error {
+	cmd := exec.Command("go", "run", "github.com/AlexsanderHamir/IdleSpy/cmd/idlespy", "--file", fileLocation, "--chart", chartType)
+
+	// Optional: capture output for logging/debug
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to run go run idlespy: %v\nOutput: %s", err, string(output))
+	}
+
+	fmt.Println("idleSpy output:\n", string(output))
 	return nil
 }

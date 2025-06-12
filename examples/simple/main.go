@@ -106,9 +106,4 @@ func main() {
 	if err := sim.Start(); err != nil {
 		log.Fatalf("Failed to start simulator: %v", err)
 	}
-
-	err := sim.WaitForVisualization()
-	if err != nil {
-		log.Fatalf("Failed to wait for visualization: %v", err)
-	}
 }

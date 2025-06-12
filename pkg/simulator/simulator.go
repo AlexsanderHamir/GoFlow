@@ -4,12 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
-
-	"github.com/AlexsanderHamir/GoFlow/pkg/visualizer"
 )
 
 // Simulator represents a concurrent pipeline simulator
@@ -143,6 +142,11 @@ func (s *Simulator) Start() error {
 		close(s.Quit)
 	}()
 
+	err := s.WaitForStats()
+	if err != nil {
+		log.Fatalf("failed to wait for stats: %v", err)
+	}
+
 	return nil
 }
 
@@ -156,17 +160,12 @@ func (s *Simulator) Done() <-chan struct{} {
 	return s.Quit
 }
 
-func (s *Simulator) WaitForVisualization() error {
+func (s *Simulator) WaitForStats() error {
 	<-s.Done()
 
 	err := s.SaveStats()
 	if err != nil {
 		return fmt.Errorf("failed to save stats: %w", err)
-	}
-
-	err = visualizer.VisualizeStageStats("static/stages")
-	if err != nil {
-		return fmt.Errorf("failed to visualize stage stats: %w", err)
 	}
 
 	return nil
