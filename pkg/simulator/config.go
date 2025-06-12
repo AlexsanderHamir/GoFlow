@@ -26,10 +26,6 @@ type StageConfig struct {
 	BufferSize int
 	// Simulated delay per item
 	WorkerDelay time.Duration
-	// Probability of operations to fail
-	ErrorRate float64
-	// Whether to propagate errors to the next stage
-	PropagateErrors bool
 	// Number of times to retry on error
 	RetryCount int
 

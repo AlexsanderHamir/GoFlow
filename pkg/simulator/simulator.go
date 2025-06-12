@@ -2,11 +2,8 @@ package simulator
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"log"
-	"os"
-	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -28,7 +25,8 @@ type Simulator struct {
 }
 
 // NewSimulator creates a new simulator instance
-func NewSimulator(ctx context.Context, cancel context.CancelFunc) *Simulator {
+func NewSimulator() *Simulator {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Simulator{
 		Ctx:    ctx,
 		Cancel: cancel,
@@ -55,52 +53,14 @@ func (s *Simulator) AddStage(stage *Stage) error {
 		}
 	}
 
+	stage.Config.Ctx = s.Ctx
+
 	s.Stages = append(s.Stages, stage)
-	return nil
-}
-
-// cleanStaticDirectory removes all directories inside the static directory
-func (s *Simulator) cleanStaticDirectory() error {
-	// Get the absolute path of the current working directory
-	cwd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current working directory: %w", err)
-	}
-
-	// Create the absolute path for the static directory
-	staticDir := filepath.Join(cwd, "static")
-
-	// Create the static directory if it doesn't exist
-	if err := os.MkdirAll(staticDir, 0755); err != nil {
-		return fmt.Errorf("failed to create static directory: %w", err)
-	}
-
-	// Read all entries in the static directory
-	entries, err := os.ReadDir(staticDir)
-	if err != nil {
-		return fmt.Errorf("failed to read static directory: %w", err)
-	}
-
-	// Remove each directory
-	for _, entry := range entries {
-		if entry.IsDir() {
-			dirPath := filepath.Join(staticDir, entry.Name())
-			if err := os.RemoveAll(dirPath); err != nil {
-				return fmt.Errorf("failed to remove directory %s: %w", dirPath, err)
-			}
-		}
-	}
-
 	return nil
 }
 
 // Start begins the simulation
 func (s *Simulator) Start() error {
-	// Clean the static directory before starting
-	if err := s.cleanStaticDirectory(); err != nil {
-		return fmt.Errorf("failed to clean static directory: %w", err)
-	}
-
 	s.Mu.RLock()
 	defer s.Mu.RUnlock()
 
@@ -129,6 +89,7 @@ func (s *Simulator) Start() error {
 		if err := stage.Start(s.Ctx, &s.Wg); err != nil {
 			return fmt.Errorf("failed to start stage %s: %w", stage.Name, err)
 		}
+
 	}
 
 	go func() {
@@ -142,10 +103,7 @@ func (s *Simulator) Start() error {
 		close(s.Quit)
 	}()
 
-	err := s.WaitForStats()
-	if err != nil {
-		log.Fatalf("failed to wait for stats: %v", err)
-	}
+	s.WaitForStats()
 
 	return nil
 }
@@ -160,15 +118,10 @@ func (s *Simulator) Done() <-chan struct{} {
 	return s.Quit
 }
 
-func (s *Simulator) WaitForStats() error {
+func (s *Simulator) WaitForStats() {
 	<-s.Done()
 
-	err := s.SaveStats()
-	if err != nil {
-		return fmt.Errorf("failed to save stats: %w", err)
-	}
-
-	return nil
+	s.PrintStats()
 }
 
 // GetStages returns a copy of the stages slice
@@ -200,28 +153,61 @@ func getFloatMetric(stats map[string]any, key string) float64 {
 }
 
 func (s *Simulator) PrintStats() {
-	for _, stage := range s.GetStages() {
-		stats := stage.GetMetrics().GetStats()
+	stages := s.GetStages()
+	stats := make([]StageStats, len(stages))
 
-		processedItems := getIntMetric(stats, "processed_items")
-		outputItems := getIntMetric(stats, "output_items")
-		droppedItems := getIntMetric(stats, "dropped_items")
-		dropRate := getFloatMetric(stats, "drop_rate") * 100
-		generatedItems := getIntMetric(stats, "generated_items")
-		throughput := getFloatMetric(stats, "throughput")
-
-		fmt.Printf("\n=== Stage: %s ===\n", stage.Name)
-		fmt.Printf("Performance Metrics:\n")
-		fmt.Printf("  • Processed Items: %d\n", processedItems)
-		fmt.Printf("  • Output Items: %d\n", outputItems)
-		fmt.Printf("  • Throughput: %.2f items/sec\n", throughput)
-		fmt.Printf("  • Dropped Items: %d\n", droppedItems)
-		fmt.Printf("  • Drop Rate: %.2f%%\n", dropRate)
-		if stage.Config.IsGenerator {
-			fmt.Printf("  • Generated Items: %d\n", generatedItems)
+	// Collect stats for each stage
+	for i, stage := range stages {
+		stageStats := stage.GetMetrics().GetStats()
+		stats[i] = StageStats{
+			StageName:      stage.Name,
+			ProcessedItems: getIntMetric(stageStats, "processed_items"),
+			OutputItems:    getIntMetric(stageStats, "output_items"),
+			Throughput:     getFloatMetric(stageStats, "throughput"),
+			DroppedItems:   getIntMetric(stageStats, "dropped_items"),
+			DropRate:       getFloatMetric(stageStats, "drop_rate") * 100,
+			GeneratedItems: getIntMetric(stageStats, "generated_items"),
 		}
-		fmt.Println("===================")
 	}
+
+	// Calculate percentage differences for throughput and processed items
+	for i := 1; i < len(stats); i++ {
+		if stats[i].StageName == "Generator" || stats[i].StageName == "DummyStage" ||
+			stats[i-1].StageName == "Generator" || stats[i-1].StageName == "DummyStage" {
+			continue
+		}
+		if stats[i-1].Throughput > 0 {
+			stats[i].ThruDiffPct = ((stats[i].Throughput - stats[i-1].Throughput) / stats[i-1].Throughput) * 100
+		}
+		if stats[i-1].ProcessedItems > 0 {
+			stats[i].ProcDiffPct = ((float64(stats[i].ProcessedItems) - float64(stats[i-1].ProcessedItems)) / float64(stats[i-1].ProcessedItems)) * 100
+		}
+	}
+
+	fmt.Printf("\n%-20s %12s %12s %12s %12s %12s %12s %12s\n",
+		"Stage", "Processed", "Output", "Throughput", "Dropped", "Drop Rate %", "Proc Δ%", "Thru Δ%")
+	fmt.Println(strings.Repeat("-", 114))
+
+	for _, stat := range stats {
+		thruDiffStr := "-"
+		if stat.ThruDiffPct != 0 {
+			thruDiffStr = fmt.Sprintf("%+.2f", stat.ThruDiffPct)
+		}
+		procDiffStr := "-"
+		if stat.ProcDiffPct != 0 {
+			procDiffStr = fmt.Sprintf("%+.2f", stat.ProcDiffPct)
+		}
+		fmt.Printf("%-20s %12d %12d %12.2f %12d %12.2f %12s %12s\n",
+			stat.StageName,
+			stat.ProcessedItems,
+			stat.OutputItems,
+			stat.Throughput,
+			stat.DroppedItems,
+			stat.DropRate,
+			procDiffStr,
+			thruDiffStr)
+	}
+	fmt.Println()
 }
 
 // StageStats represents the statistics for a single stage
@@ -233,50 +219,6 @@ type StageStats struct {
 	DroppedItems   uint64  `json:"dropped_items"`
 	DropRate       float64 `json:"drop_rate"`
 	GeneratedItems uint64  `json:"generated_items,omitempty"`
-}
-
-// SaveStats saves the statistics of each stage to a separate JSON file
-func (s *Simulator) SaveStats() error {
-	// Create static directory if it doesn't exist
-	staticDir := "static"
-	if err := os.MkdirAll(staticDir, 0755); err != nil {
-		return fmt.Errorf("failed to create static directory: %w", err)
-	}
-
-	// Create stage directory under static if it doesn't exist
-	stageDir := filepath.Join(staticDir, "stages")
-	if err := os.MkdirAll(stageDir, 0755); err != nil {
-		return fmt.Errorf("failed to create stages directory: %w", err)
-	}
-
-	for _, stage := range s.GetStages() {
-		stats := stage.GetMetrics().GetStats()
-
-		stageStats := StageStats{
-			StageName:      stage.Name,
-			ProcessedItems: getIntMetric(stats, "processed_items"),
-			OutputItems:    getIntMetric(stats, "output_items"),
-			Throughput:     getFloatMetric(stats, "throughput"),
-			DroppedItems:   getIntMetric(stats, "dropped_items"),
-			DropRate:       getFloatMetric(stats, "drop_rate") * 100,
-		}
-
-		if stage.Config.IsGenerator {
-			stageStats.GeneratedItems = getIntMetric(stats, "generated_items")
-		}
-
-		// Marshal stats to JSON
-		jsonData, err := json.MarshalIndent(stageStats, "", "  ")
-		if err != nil {
-			return fmt.Errorf("failed to marshal stats for stage %s: %w", stage.Name, err)
-		}
-
-		// Create or truncate the stats file in the stages directory
-		filename := filepath.Join(stageDir, fmt.Sprintf("stage_%s_stats.json", stage.Name))
-		if err := os.WriteFile(filename, jsonData, 0644); err != nil {
-			return fmt.Errorf("failed to write stats file for stage %s: %w", stage.Name, err)
-		}
-	}
-
-	return nil
+	ThruDiffPct    float64 `json:"-"`
+	ProcDiffPct    float64 `json:"-"`
 }

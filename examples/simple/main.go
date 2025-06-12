@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"math/rand"
 	"time"
@@ -11,11 +10,8 @@ import (
 
 func main() {
 	// Create a context without timeout since simulator duration controls execution time
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	// Create simulator
-	sim := simulator.NewSimulator(ctx, cancel)
+	sim := simulator.NewSimulator()
 	sim.Duration = 10 * time.Second
 
 	// Create configuration for stages
@@ -27,16 +23,16 @@ func main() {
 		ItemGenerator: func() any {
 			return rand.Intn(100)
 		},
-		Ctx: ctx,
 	}
 
 	globalConfig := &simulator.StageConfig{
 		RoutineNum: 100,
 		BufferSize: 5000,
-		Ctx:        ctx,
 	}
 
+	// Generator is required, and must be the first stage
 	stage1 := simulator.NewStage("Generator", generatorConfig)
+
 	stage2 := simulator.NewStage("Stage-1", globalConfig)
 	stage2.Config.WorkerFunc = func(item any) (any, error) {
 		time.Sleep(10 * time.Millisecond)
@@ -46,49 +42,50 @@ func main() {
 
 	stage3 := simulator.NewStage("Stage-2", globalConfig)
 	stage3.Config.WorkerFunc = func(item any) (any, error) {
-		time.Sleep(40 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		item = item.(int) + rand.Intn(100)
 		return item, nil
 	}
 
 	stage4 := simulator.NewStage("Stage-3", globalConfig)
 	stage4.Config.WorkerFunc = func(item any) (any, error) {
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(300 * time.Millisecond)
 		item = item.(int) + rand.Intn(100)
 		return item, nil
 	}
 
 	stage5 := simulator.NewStage("Stage-4", globalConfig)
 	stage5.Config.WorkerFunc = func(item any) (any, error) {
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 		item = item.(int) + rand.Intn(100)
 		return item, nil
 	}
 
 	stage6 := simulator.NewStage("Stage-5", globalConfig)
 	stage6.Config.WorkerFunc = func(item any) (any, error) {
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(80 * time.Millisecond)
 		item = item.(int) + rand.Intn(100)
 		return item, nil
 	}
 
 	stage7 := simulator.NewStage("Stage-6", globalConfig)
 	stage7.Config.WorkerFunc = func(item any) (any, error) {
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(160 * time.Millisecond)
 		item = item.(int) + rand.Intn(100)
 		return item, nil
 	}
 
 	stage8 := simulator.NewStage("Stage-7", globalConfig)
 	stage8.Config.WorkerFunc = func(item any) (any, error) {
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(320 * time.Millisecond)
 		item = item.(int) + rand.Intn(100)
 		return item, nil
 	}
 
+	// DummyStage is required, and must be the last stage
 	DummyStage := simulator.NewStage("DummyStage", globalConfig)
 	DummyStage.Config.WorkerFunc = func(item any) (any, error) {
-		time.Sleep(350 * time.Millisecond)
+		time.Sleep(640 * time.Millisecond)
 		item = item.(int) + rand.Intn(100)
 		return item, nil
 	}

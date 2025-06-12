@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/AlexsanderHamir/IdleSpy/tracker"
 )
 
 // processBurst handles sending a burst of items to the output channel
-func (s *Stage) processBurst(items []any, id tracker.GoroutineId) {
+func (s *Stage) processBurst(items []any) {
 	var processedItems int
 
 	defer func() {
@@ -19,25 +17,20 @@ func (s *Stage) processBurst(items []any, id tracker.GoroutineId) {
 	}()
 
 	for _, item := range items {
-		startTime := time.Now()
 		select {
 		case <-s.Config.Ctx.Done():
 			s.Metrics.RecordDroppedBurst(len(items) - processedItems)
-			s.IdleSpy.TrackSelectCase("burst_ctx_done", time.Since(startTime), id)
 			return
 		case s.Output <- item:
 			processedItems++
 			s.Metrics.RecordOutput()
-			s.IdleSpy.TrackSelectCase("burst_output_select", time.Since(startTime), id)
 		default:
 			if s.Config.DropOnBackpressure {
 				s.Metrics.RecordDropped()
-				s.IdleSpy.TrackSelectCase("burst_output_backpressure_default", time.Since(startTime), id)
 			} else {
 				s.Output <- item
 				processedItems++
 				s.Metrics.RecordOutput()
-				s.IdleSpy.TrackSelectCase("burst_output_default", time.Since(startTime), id)
 			}
 		}
 	}
@@ -54,7 +47,7 @@ func (s *Stage) shouldExecuteBurst(burstCount int, lastBurstTime time.Time) bool
 }
 
 // processRegularGeneration handles the regular item generation flow
-func (s *Stage) processRegularGeneration(id tracker.GoroutineId, startTime time.Time) {
+func (s *Stage) processRegularGeneration() {
 	defer func() {
 		if r := recover(); r != nil {
 			s.Metrics.RecordDropped()
@@ -74,18 +67,14 @@ func (s *Stage) processRegularGeneration(id tracker.GoroutineId, startTime time.
 	select {
 	case <-s.Config.Ctx.Done():
 		s.Metrics.RecordDropped()
-		s.IdleSpy.TrackSelectCase("generation_ctx_done", time.Since(startTime), id)
 		return
 	case s.Output <- item:
 		s.Metrics.RecordOutput()
-		s.IdleSpy.TrackSelectCase("generation_output_select", time.Since(startTime), id)
 	default:
 		if s.Config.DropOnBackpressure {
 			s.Metrics.RecordDropped()
-			s.IdleSpy.TrackSelectCase("generation_backpressure_default", time.Since(startTime), id)
 		} else {
 			s.Output <- item
-			s.IdleSpy.TrackSelectCase("generation_output_default", time.Since(startTime), id)
 			s.Metrics.RecordOutput()
 		}
 	}
@@ -102,7 +91,7 @@ func (s *Stage) processWorkerItem(item any) (any, error) {
 }
 
 // handleWorkerOutput manages sending the processed item to the output channel with backpressure handling
-func (s *Stage) handleWorkerOutput(result any, id tracker.GoroutineId, startTime time.Time) {
+func (s *Stage) handleWorkerOutput(result any, startTime time.Time) {
 	defer func() {
 		if r := recover(); r != nil {
 			s.Metrics.RecordDropped()
@@ -112,19 +101,15 @@ func (s *Stage) handleWorkerOutput(result any, id tracker.GoroutineId, startTime
 	select {
 	case <-s.Config.Ctx.Done():
 		s.Metrics.RecordDropped()
-		s.IdleSpy.TrackSelectCase("worker_ctx_done", time.Since(startTime), id)
 		return
 	case s.Output <- result:
 		s.Metrics.RecordOutput()
-		s.IdleSpy.TrackSelectCase("worker_output_select", time.Since(startTime), id)
 	default:
 		if s.Config.DropOnBackpressure {
 			s.Metrics.RecordDropped()
-			s.IdleSpy.TrackSelectCase("worker_backpressure_default", time.Since(startTime), id)
 		} else {
 			s.Output <- result
 			s.Metrics.RecordOutput()
-			s.IdleSpy.TrackSelectCase("worker_output_default", time.Since(startTime), id)
 		}
 	}
 }
@@ -199,17 +184,16 @@ func (s *Stage) stageTermination(wg *sync.WaitGroup) {
 	case s.Sem <- struct{}{}:
 		close(s.Output)
 		s.Metrics.Stop()
-		tracker.SaveStats(s.IdleSpy.Stats, fmt.Sprintf("goroutine_info_%s", s.Name))
 	default:
 	}
 
 	wg.Done()
 }
 
-func (s *Stage) executeBurst(burstCount *int, lastBurstTime *time.Time, id tracker.GoroutineId) {
+func (s *Stage) executeBurst(burstCount *int, lastBurstTime *time.Time) {
 	items := s.Config.InputBurst()
 	s.Metrics.RecordGeneratedBurst(len(items))
-	s.processBurst(items, id)
+	s.processBurst(items)
 	*burstCount++
 	*lastBurstTime = time.Now()
 }

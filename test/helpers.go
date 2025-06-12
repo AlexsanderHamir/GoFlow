@@ -1,7 +1,6 @@
 package test
 
 import (
-	"context"
 	"log"
 	"math/rand"
 	"testing"
@@ -11,9 +10,7 @@ import (
 )
 
 func CreateConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig, *simulator.Simulator) {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	sim := simulator.NewSimulator(ctx, cancel)
+	sim := simulator.NewSimulator()
 	sim.Duration = 10 * time.Second
 
 	generatorConfig := &simulator.StageConfig{
@@ -24,7 +21,6 @@ func CreateConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig
 		ItemGenerator: func() any {
 			return rand.Intn(100)
 		},
-		Ctx: ctx,
 	}
 
 	globalConfig := &simulator.StageConfig{
@@ -34,7 +30,6 @@ func CreateConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig
 			item = item.(int) + rand.Intn(100)
 			return item, nil
 		},
-		Ctx: ctx,
 	}
 
 	return generatorConfig, globalConfig, sim
@@ -92,9 +87,7 @@ func CheckStageAccountingConsistency(simulator *simulator.Simulator, t *testing.
 }
 
 func CreateConfigsAndSimulatorBurst() (*simulator.StageConfig, *simulator.StageConfig, *simulator.Simulator) {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	sim := simulator.NewSimulator(ctx, cancel)
+	sim := simulator.NewSimulator()
 	sim.Duration = 10 * time.Second
 
 	generatorConfig := &simulator.StageConfig{
@@ -115,7 +108,6 @@ func CreateConfigsAndSimulatorBurst() (*simulator.StageConfig, *simulator.StageC
 		},
 		BurstCountTotal: 1000,
 		BurstInterval:   100 * time.Millisecond,
-		Ctx:             ctx,
 	}
 
 	globalConfig := &simulator.StageConfig{
@@ -125,7 +117,6 @@ func CreateConfigsAndSimulatorBurst() (*simulator.StageConfig, *simulator.StageC
 			item = item.(int) + rand.Intn(100)
 			return item, nil
 		},
-		Ctx: ctx,
 	}
 
 	return generatorConfig, globalConfig, sim
