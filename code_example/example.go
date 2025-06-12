@@ -9,7 +9,7 @@ import (
 	"github.com/AlexsanderHamir/GoFlow/pkg/simulator"
 )
 
-func main() {
+func CodeExample() {
 	// Create a context without timeout since simulator duration controls execution time
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
