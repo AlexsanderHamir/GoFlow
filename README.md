@@ -110,4 +110,4 @@ func main() {
 - Only set one of `Duration` or `MaxGeneratedItems`.
 - The `Generator` stage must be the first, and `DummyStage` must be the last, both stages must be named that way if you don't want to include their statistics.
 - In case your function could error, configure the `RetryCount` field.
-- `Proc Δ%` and `Thru Δ%` represent the percentage difference from the previous stage. For example, a value of -3.54 in the second stage's Thru Δ% indicates it had 3.54% lower throughput compared to the stage before it.
+- `Proc Δ%` and `Thru Δ%`ÒÒ represent the percentage difference from the previous stage. For example, a value of -3.54 in the second stage's Thru Δ% indicates it had 3.54% lower throughput compared to the stage before it.

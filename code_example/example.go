@@ -1,7 +1,6 @@
 package code_example
 
 import (
-	"context"
 	"log"
 	"math/rand"
 	"time"
@@ -10,10 +9,6 @@ import (
 )
 
 func CodeExample() {
-	// Create a context without timeout since simulator duration controls execution time
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	// Create simulator
 	sim := simulator.NewSimulator()
 	sim.Duration = 10 * time.Second
@@ -27,13 +22,11 @@ func CodeExample() {
 		ItemGenerator: func() any {
 			return rand.Intn(100)
 		},
-		Ctx: ctx,
 	}
 
 	globalConfig := &simulator.StageConfig{
 		RoutineNum: 100,
 		BufferSize: 5000,
-		Ctx:        ctx,
 	}
 
 	stage1 := simulator.NewStage("Generator", generatorConfig)

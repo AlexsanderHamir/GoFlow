@@ -4,8 +4,6 @@ import (
 	"context"
 	"sync"
 	"time"
-
-	"github.com/AlexsanderHamir/IdleSpy/tracker"
 )
 
 // Stage represents a processing stage in the pipeline
@@ -18,7 +16,6 @@ type Stage struct {
 
 	Config  *StageConfig
 	Metrics *StageMetrics
-	IdleSpy *tracker.GoroutineManager
 
 	IsFinal           bool
 	MaxGeneratedItems int
@@ -38,7 +35,6 @@ func NewStage(name string, config *StageConfig) *Stage {
 		Config:  config,
 		Sem:     make(chan struct{}, 1),
 		Metrics: NewStageMetrics(),
-		IdleSpy: tracker.NewGoroutineManager(),
 	}
 }
 
