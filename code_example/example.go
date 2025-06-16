@@ -12,8 +12,9 @@ func CodeExample() {
 	// Create simulator
 	sim := simulator.NewSimulator()
 	sim.Duration = 10 * time.Second
+	// sim.MaxGeneratedItems = 10000
 
-	// Create configuration for stages
+	// Create configuration for generator stage
 	generatorConfig := &simulator.StageConfig{
 		InputRate:   100 * time.Millisecond,
 		RoutineNum:  100,
@@ -24,12 +25,15 @@ func CodeExample() {
 		},
 	}
 
+	// Create configuration for other stages
 	globalConfig := &simulator.StageConfig{
 		RoutineNum: 100,
 		BufferSize: 5000,
 	}
 
+	// Generator must be the first stage, it generates items for the pipeline
 	stage1 := simulator.NewStage("Generator", generatorConfig)
+
 	stage2 := simulator.NewStage("Stage-1", globalConfig)
 	stage2.Config.WorkerFunc = func(item any) (any, error) {
 		time.Sleep(10 * time.Millisecond)
@@ -79,6 +83,7 @@ func CodeExample() {
 		return item, nil
 	}
 
+	// Dummy stage must be the last stage, it removes all items from the pipeline
 	stage9 := simulator.NewStage("DummyStage", globalConfig)
 	stage9.Config.WorkerFunc = func(item any) (any, error) {
 		time.Sleep(350 * time.Millisecond)
