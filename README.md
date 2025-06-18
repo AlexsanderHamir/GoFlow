@@ -1,5 +1,14 @@
 # GoFlow
 
+[![Go Version](https://img.shields.io/badge/Go-1.24%2B-blue)](https://golang.org)
+[![Go Report Card](https://goreportcard.com/badge/github.com/AlexsanderHamir/PoolX)](https://goreportcard.com/report/github.com/AlexsanderHamir/GoFlow)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GoDoc](https://godoc.org/github.com/AlexsanderHamir/PoolX?status.svg)](https://godoc.org/github.com/AlexsanderHamir/GoFlow)
+![Issues](https://img.shields.io/github/issues/AlexsanderHamir/GoFlow)
+![Last Commit](https://img.shields.io/github/last-commit/AlexsanderHamir/GoFlow)
+![Code Size](https://img.shields.io/github/languages/code-size/AlexsanderHamir/GoFlow)
+![Version](https://img.shields.io/github/v/tag/AlexsanderHamir/GoFlow?sort=semver)
+
 GoFlow is a pipeline visualizer that helps developers fine-tune their concurrent systems by providing statistics for each stage of the pipeline, making it easy to identify bottlenecks and performance issues.
 
 ![Example Pipeline Visualization](example.png)
