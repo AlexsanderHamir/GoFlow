@@ -9,17 +9,14 @@ GoFlow is a pipeline visualizer that helps developers fine-tune their concurrent
 - [Features](#features)
 - [Installation](#installation)
 - [Quick Start Example](#quick-start-example)
-- [IMPORTANT](#important)
-- [Concepts](#concepts)
-- [Customization](#customization)
-- [Running the Example](#running-the-example)
+- [Stats Explanation](#stats-explanation)
+- [Design Explanation](#design-explanation)
 
 ## Features
 
-- Visualize concurrent pipeline stages stats.
-- Configure each stage independently (buffer size, worker count, etc.)
-- Identify bottlenecks and optimize throughput
-- Plug in your own worker functions for realistic simulation
+- Visualize pipeline performance stats for each stage.
+- Configure each stage independently (buffer size, goroutine count, input rate, etc.).
+- Plug in your own main worker functions for accurate stats collection.
 
 ## Installation
 
@@ -29,7 +26,7 @@ go get github.com/AlexsanderHamir/GoFlow
 
 ## Quick Start Example
 
-Below is a minimal example to get you started. Copy this into a file (e.g., `main.go`) in your project:
+Below is a minimal example to give you a basic idea of how to use the library, if you want a more robust example go to: [example.go](code_example/example.go)
 
 ```go
 package main
@@ -70,7 +67,7 @@ func main() {
 		return stage
 	}
 
-	sim.AddStage(simulator.NewStage("Generator", generatorConfig))
+	sim.AddStage(simulator.NewStage("Generator", generatorConfig)) // Generator must be first
 	sim.AddStage(newStage("Stage-1", 10*time.Millisecond))
 	sim.AddStage(newStage("Stage-2", 100*time.Millisecond))
 	sim.AddStage(newStage("DummyStage", 200*time.Millisecond)) // DummyStage must be last
@@ -81,33 +78,20 @@ func main() {
 }
 ```
 
-## Concepts
+## Stats Explanation
+
+- **Processed**: Number of processed but not yet sent items.
+- **Output**: Number of items sent to the next stage successfully.
+- **Throughput**: Number of output items divided by the duration of the stage in the simulation.
+- **Dropped**: Number of items dropped during cancelation when the simulation ends.
+- **Drop Rate**: Self explanatory
+- **Proc Δ%**: Percentage difference in processed items in comparison with the stage before the current one.
+- **Thru Δ%**: Percentage difference in throughput in comparison with the stage before the current one.
+
+## Design Explanation
 
 - **Simulator**: Orchestrates the pipeline and manages stages.
 - **Stage**: Represents a processing step. Each stage can have its own configuration and worker function.
-- **Generator**: The first stage, responsible for generating items into the pipeline.
-- **DummyStage**: The last stage, responsible for consuming items and removing them from the pipeline.
+- **Generator**: The first stage, responsible for generating items into the pipeline. **(required)**
+- **DummyStage**: The last stage, responsible for consuming items and removing them from the pipeline. **(required)**
 - **StageConfig**: Configuration for each stage (buffer size, worker count, etc.).
-
-## Customization
-
-- You can define your own worker functions for each stage by setting `WorkerFunc` in the stage's config.
-- You can control the number of items generated or the simulation duration (set only one: `Duration` or `MaxGeneratedItems`).
-- Adjust `RoutineNum` and `BufferSize` for each stage to simulate different concurrency and buffering scenarios.
-
-## Running the Example
-
-1. Save the example code to `main.go`.
-2. Run:
-   ```sh
-   go run main.go
-   ```
-3. Observe the output and statistics for each stage.
-
-## IMPORTANT
-
-- Ensure you are using Go 1.18 or newer.
-- Only set one of `Duration` or `MaxGeneratedItems`.
-- The `Generator` stage must be the first, and `DummyStage` must be the last, both stages must be named that way if you don't want to include their statistics.
-- In case your function could error, configure the `RetryCount` field.
-- `Proc Δ%` and `Thru Δ%`ÒÒ represent the percentage difference from the previous stage. For example, a value of -3.54 in the second stage's Thru Δ% indicates it had 3.54% lower throughput compared to the stage before it.
