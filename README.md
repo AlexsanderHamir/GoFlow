@@ -1,9 +1,9 @@
 # GoFlow
 
 [![Go Version](https://img.shields.io/badge/Go-1.24%2B-blue)](https://golang.org)
-[![Go Report Card](https://goreportcard.com/badge/github.com/AlexsanderHamir/PoolX)](https://goreportcard.com/report/github.com/AlexsanderHamir/GoFlow)
+[![Go Report Card](https://goreportcard.com/badge/github.com/AlexsanderHamir/GoFlow)](https://goreportcard.com/report/github.com/AlexsanderHamir/GoFlow)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GoDoc](https://godoc.org/github.com/AlexsanderHamir/PoolX?status.svg)](https://godoc.org/github.com/AlexsanderHamir/GoFlow)
+[![GoDoc](https://godoc.org/github.com/AlexsanderHamir/GoFlow?status.svg)](https://godoc.org/github.com/AlexsanderHamir/GoFlow/pkg/simulator)
 ![Issues](https://img.shields.io/github/issues/AlexsanderHamir/GoFlow)
 ![Last Commit](https://img.shields.io/github/last-commit/AlexsanderHamir/GoFlow)
 ![Code Size](https://img.shields.io/github/languages/code-size/AlexsanderHamir/GoFlow)
