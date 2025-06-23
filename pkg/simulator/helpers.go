@@ -9,15 +9,17 @@ import (
 
 // StageStats represents the statistics for a single stage
 type StageStats struct {
-	StageName      string  `json:"stage_name"`
-	ProcessedItems uint64  `json:"processed_items"`
-	OutputItems    uint64  `json:"output_items"`
-	Throughput     float64 `json:"throughput"`
-	DroppedItems   uint64  `json:"dropped_items"`
-	DropRate       float64 `json:"drop_rate"`
-	GeneratedItems uint64  `json:"generated_items,omitempty"`
-	ThruDiffPct    float64 `json:"-"`
-	ProcDiffPct    float64 `json:"-"`
+	StageName      string
+	ProcessedItems uint64
+	OutputItems    uint64
+	Throughput     float64
+	DroppedItems   uint64
+	DropRate       float64
+	GeneratedItems uint64
+	ThruDiffPct    float64
+	ProcDiffPct    float64
+	IsGenerator    bool
+	IsFinal        bool
 }
 
 // processBurst handles sending a burst of items to the output channel
@@ -221,6 +223,8 @@ func collectStageStats(stage *Stage) StageStats {
 		DroppedItems:   getIntMetric(stats, "dropped_items"),
 		DropRate:       getFloatMetric(stats, "drop_rate") * 100,
 		GeneratedItems: getIntMetric(stats, "generated_items"),
+		IsGenerator:    stage.Config.IsGenerator,
+		IsFinal:        stage.IsFinal,
 	}
 }
 
@@ -229,6 +233,7 @@ func (s *Simulator) initializeStages() error {
 	generator := s.Stages[0]
 	generator.MaxGeneratedItems = s.MaxGeneratedItems
 	generator.Stop = s.Stop
+	generator.Config.IsGenerator = true
 
 	lastStage := s.Stages[len(s.Stages)-1]
 	lastStage.IsFinal = true
@@ -280,8 +285,8 @@ func computeDiffs(prev, curr *StageStats) (procDiffStr, thruDiffStr string) {
 	}
 
 	// Skip Generator and DummyStage
-	if curr.StageName == "Generator" || curr.StageName == "DummyStage" ||
-		prev.StageName == "Generator" || prev.StageName == "DummyStage" {
+	if curr.IsGenerator || curr.IsFinal ||
+		prev.IsGenerator || prev.IsFinal {
 		return
 	}
 

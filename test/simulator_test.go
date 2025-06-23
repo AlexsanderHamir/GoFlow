@@ -7,7 +7,6 @@ import (
 )
 
 const (
-	// Number of times to run the simulation
 	SimulationIterations = 10
 )
 

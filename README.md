@@ -76,16 +76,19 @@ func main() {
 		return stage
 	}
 
-	// Generator must be first
+	// Generator must be first, feeds items into the pipeline.
 	sim.AddStage(simulator.NewStage("Generator", generatorConfig))
+
+	// Your pipeline stages
 	sim.AddStage(newStage("Stage-1", 10*time.Millisecond))
 	sim.AddStage(newStage("Stage-2", 100*time.Millisecond))
 
-	// DummyStage must be last
+	// DummyStage must be last, removes items from the pipeline.
 	sim.AddStage(newStage("DummyStage", 200*time.Millisecond))
 
-	// Generator and Dummy are essential for the simulation
-	// name both as done above if you're like to ignore their stats.
+	// Generator and Dummy are essential for the simulation,
+	// both have their stats ignore because their sole purpose
+	// is to allow the pipeline to be tested.
 	if err := sim.Start(); err != nil {
 		log.Fatalf("Failed to start simulator: %v", err)
 	}
