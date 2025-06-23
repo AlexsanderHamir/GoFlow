@@ -76,11 +76,16 @@ func main() {
 		return stage
 	}
 
-	sim.AddStage(simulator.NewStage("Generator", generatorConfig)) // Generator must be first
+	// Generator must be first
+	sim.AddStage(simulator.NewStage("Generator", generatorConfig))
 	sim.AddStage(newStage("Stage-1", 10*time.Millisecond))
 	sim.AddStage(newStage("Stage-2", 100*time.Millisecond))
-	sim.AddStage(newStage("DummyStage", 200*time.Millisecond)) // DummyStage must be last
 
+	// DummyStage must be last
+	sim.AddStage(newStage("DummyStage", 200*time.Millisecond))
+
+	// Generator and Dummy are essential for the simulation
+	// name both as done above if you're like to ignore their stats.
 	if err := sim.Start(); err != nil {
 		log.Fatalf("Failed to start simulator: %v", err)
 	}
