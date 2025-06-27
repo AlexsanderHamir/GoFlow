@@ -111,3 +111,35 @@ func main() {
 - **Generator**: The first stage, responsible for generating items into the pipeline. **(required)**
 - **DummyStage**: The last stage, responsible for consuming items and removing them from the pipeline. **(required)**
 - **StageConfig**: Configuration for each stage (buffer size, worker count, etc.).
+
+## Contributing
+
+We welcome contributions! Before you start contributing, please ensure you have:
+
+- **Go 1.24.3 or later** installed
+- **Git** for version control
+- Basic understanding of Go testing and benchmarking
+
+### Quick Setup
+
+```bash
+# Fork and clone the repository
+git clone https://github.com/AlexsanderHamir/GenPool.git
+cd GenPool
+
+# Install dependencies
+go mod download
+go mod tidy
+
+# Run tests to verify setup
+go test -v ./...
+go test -bench=. ./...
+```
+
+### Development Guidelines
+
+- Write tests for new functionality
+- Run benchmarks to ensure no performance regressions
+- Follow Go code style guidelines
+- Update documentation for user-facing changes
+- Ensure all tests pass before submitting PRs
