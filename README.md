@@ -56,7 +56,6 @@ func main() {
 		InputRate:   100 * time.Millisecond,
 		RoutineNum:  100,
 		BufferSize:  5000,
-		IsGenerator: true,
 		ItemGenerator: func() any {
 			return rand.Intn(100)
 		},
