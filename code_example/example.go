@@ -30,7 +30,8 @@ func Example() {
 		BufferSize: 5000, // input buffer size
 	}
 
-	// Generator must be the first stage, it feeds items to the pipeline
+	// The first stage will be considered the generator stage,
+	// responsible for feeding data into the pipeline.
 	stage1 := simulator.NewStage("Generators", generatorConfig)
 
 	stage2 := simulator.NewStage("Stage-1", globalConfig)
@@ -82,7 +83,8 @@ func Example() {
 		return item, nil
 	}
 
-	// Dummy stage must be the last stage, it removes all items from the pipeline
+	// The last stage will be considered the dummy stage, its stats
+	// won't be accounted for, its only job is to discard the items.
 	stage9 := simulator.NewStage("DummyStages", globalConfig)
 	stage9.Config.WorkerFunc = func(item any) (any, error) {
 		time.Sleep(350 * time.Millisecond)
