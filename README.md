@@ -30,7 +30,7 @@
 ## Installation
 
 ```sh
-go get github.com/AlexsanderHamir/GoFlow
+go get github.com/AlexsanderHamir/GoFlow@latest
 ```
 
 ## Quick Start Example
