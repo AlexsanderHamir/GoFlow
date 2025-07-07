@@ -9,8 +9,7 @@
 ![Code Size](https://img.shields.io/github/languages/code-size/AlexsanderHamir/GoFlow)
 ![Version](https://img.shields.io/github/v/tag/AlexsanderHamir/GoFlow?sort=semver)
 
-> ⚙️ **GoFlow** is a developer tool for simulating and visualizing Go pipeline performance—ideal for debugging buffering, throughput, and concurrency bottlenecks.
-
+**GoFlow** is a tool for visualizing and tuning pipeline performance in Go. Easily experiment with buffer sizes, goroutine counts, and stage depth to find the optimal configuration for your system.
 
 ![Example Pipeline Visualization](example.png)
 
@@ -101,17 +100,7 @@ func main() {
 - **Output**: Number of items sent to the next stage successfully.
 - **Throughput**: Number of output items divided by the duration of the stage in the simulation.
 - **Dropped**: Number of items dropped during cancelation when the simulation ends.
-- **Drop Rate**: Self explanatory
-- **Proc Δ%**: Percentage difference in processed items in comparison with the stage before the current one.
-- **Thru Δ%**: Percentage difference in throughput in comparison with the stage before the current one.
-
-## Design Explanation
-
-- **Simulator**: Orchestrates the pipeline and manages stages.
-- **Stage**: Represents a processing step. Each stage can have its own configuration and worker function.
-- **Generator**: The first stage, responsible for generating items into the pipeline. **(required)**
-- **DummyStage**: The last stage, responsible for consuming items and removing them from the pipeline. **(required)**
-- **StageConfig**: Configuration for each stage (buffer size, worker count, etc.).
+- **Δ%**: Percentage difference in comparison with the stage before the current one.
 
 ## Contributing
 
