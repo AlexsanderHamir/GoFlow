@@ -131,8 +131,7 @@ go mod download
 go mod tidy
 
 # Run tests to verify setup
-go test -v ./...
-go test -bench=. ./...
+ go test -v ./test 
 ```
 
 ### Development Guidelines
