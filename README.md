@@ -123,12 +123,8 @@ We welcome contributions! Before you start contributing, please ensure you have:
 
 ```bash
 # Fork and clone the repository
-git clone https://github.com/AlexsanderHamir/GenPool.git
-cd GenPool
-
-# Install dependencies
-go mod download
-go mod tidy
+git clone https://github.com/AlexsanderHamir/GoFlow.git
+cd GoFlow
 
 # Run tests to verify setup
  go test -v ./test 
