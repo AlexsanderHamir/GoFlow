@@ -19,7 +19,7 @@
 - [Installation](#installation)
 - [Quick Start Example](#quick-start-example)
 - [Stats Explanation](#stats-explanation)
-- [Design Explanation](#design-explanation)
+- [Output](#output)
 
 ## Features
 
@@ -101,6 +101,14 @@ func main() {
 - **Throughput**: Number of output items divided by the duration of the stage in the simulation.
 - **Dropped**: Number of items dropped during cancelation when the simulation ends.
 - **Δ%**: Percentage difference in comparison with the stage before the current one.
+
+## Output
+
+The stats will be printed to the terminal, if you want to save to a file you can do the following:
+
+```bash
+go run main.go > output.txt
+```
 
 ## Contributing
 
