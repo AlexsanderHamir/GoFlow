@@ -30,7 +30,7 @@
 ## Installation
 
 ```sh
-go get github.com/AlexsanderHamir/GoFlow
+go get github.com/AlexsanderHamir/GoFlow@latest
 ```
 
 ## Quick Start Example
@@ -101,6 +101,7 @@ func main() {
 - **Throughput**: Number of output items divided by the duration of the stage in the simulation.
 - **Dropped**: Number of items dropped during cancelation when the simulation ends.
 - **Δ%**: Percentage difference in comparison with the stage before the current one.
+- **Goroutines**: The total amount of time the goroutine spent blocked, represented by a histogram.
 
 ## Output
 
