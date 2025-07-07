@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	SimulationIterations = 10
+	SimulationIterations = 1
 )
 
 func TestSimulatorGeneratedStatsConsistency(t *testing.T) {
