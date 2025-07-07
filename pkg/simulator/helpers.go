@@ -231,8 +231,6 @@ func collectStageStats(stage *Stage) StageStats {
 // initializeStages initializes the stages, both generators and workers
 func (s *Simulator) initializeStages() error {
 	generator := s.Stages[0]
-	generator.Config.IsGenerator = true
-
 	generator.MaxGeneratedItems = s.MaxGeneratedItems
 	generator.Stop = s.Stop
 	generator.Config.IsGenerator = true
