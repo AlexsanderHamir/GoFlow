@@ -24,15 +24,15 @@ func Example() {
 		},
 	}
 
-	// Create configuration for other stages
-	globalConfig := &simulator.StageConfig{
-		RoutineNum: 100,
-		BufferSize: 5000, // input buffer size
-	}
-
 	// The first stage will be considered the generator stage,
 	// responsible for feeding data into the pipeline.
 	stage1 := simulator.NewStage("Generators", generatorConfig)
+
+	// Create configuration for other stages
+	globalConfig := &simulator.StageConfig{
+		RoutineNum: 100,
+		BufferSize: 5000, // output buffer size
+	}
 
 	stage2 := simulator.NewStage("Stage-1", globalConfig)
 	stage2.Config.WorkerFunc = func(item any) (any, error) {
