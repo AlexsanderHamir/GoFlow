@@ -1,65 +1,3 @@
-// Package simulator provides a concurrent pipeline simulator for testing and benchmarking
-// multi-stage data processing workflows. It supports both continuous and burst-based
-// data generation, configurable processing stages, and comprehensive metrics collection.
-//
-// The simulator is designed to help developers understand how their pipeline stages
-// perform under various load conditions, including:
-//   - Different input rates and burst patterns
-//   - Backpressure handling and drop policies
-//   - Worker concurrency and processing delays
-//   - Error handling and retry mechanisms
-//
-// # Key Features
-//
-//   - **Concurrent Processing**: Each stage can run multiple worker goroutines
-//   - **Flexible Generation**: Support for both rate-limited and burst-based data generation
-//   - **Backpressure Handling**: Configurable drop policies when channels are full
-//   - **Comprehensive Metrics**: Real-time collection of throughput, drop rates, and processing stats
-//   - **Graceful Shutdown**: Proper cleanup and termination of all goroutines
-//   - **Retry Logic**: Configurable retry mechanisms for failed processing
-//
-// # Usage Example
-//
-//	sim := simulator.NewSimulator()
-//	sim.Duration = 10 * time.Second
-//
-//	// Create a generator stage
-//	generatorConfig := &simulator.StageConfig{
-//		IsGenerator:    true,
-//		ItemGenerator:  func() any { return "data" },
-//		InputRate:      100 * time.Millisecond,
-//		RoutineNum:     1,
-//		BufferSize:     100,
-//	}
-//	generator := simulator.NewStage("generator", generatorConfig)
-//
-//	// Create a processing stage
-//	processorConfig := &simulator.StageConfig{
-//		WorkerFunc:     func(item any) (any, error) { return item, nil },
-//		RoutineNum:     3,
-//		BufferSize:     50,
-//		WorkerDelay:    50 * time.Millisecond,
-//		RetryCount:     2,
-//	}
-//	processor := simulator.NewStage("processor", processorConfig)
-//
-//	sim.AddStage(generator)
-//	sim.AddStage(processor)
-//	sim.Start()
-//
-// # Architecture
-//
-// The simulator uses a pipeline architecture where data flows through stages:
-// Generator → Stage1 → Stage2 → ... → FinalStage
-//
-// Each stage runs in its own goroutine(s) and communicates via buffered channels.
-// The first stage is always a generator that produces data, while subsequent stages
-// process and transform the data. The final stage typically discards results.
-//
-// # Thread Safety
-//
-// The simulator is designed to be thread-safe and can be safely used from multiple
-// goroutines. All internal state is protected by appropriate synchronization primitives.
 package simulator
 
 import (
@@ -67,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/AlexsanderHamir/IdleSpy/tracker"
 )
 
 // Simulator represents a concurrent pipeline simulator that orchestrates
@@ -267,17 +207,34 @@ func (s *Simulator) GetStages() []*Stage {
 //   - Percentage changes between stages
 //
 // The output is formatted as a table for easy reading and analysis.
+
+type StateEntry struct {
+	Stats map[tracker.GoroutineId]*tracker.GoroutineStats
+	Label string
+}
+
 func (s *Simulator) PrintStats() {
 	stages := s.GetStages()
 	printHeader()
 
 	var prev *StageStats
+	allStages := []*StateEntry{}
+
 	for _, stage := range stages {
 		current := collectStageStats(stage)
 		procDiff, thruDiff := computeDiffs(prev, &current)
 		printStageRow(&current, procDiff, thruDiff)
 		prev = &current
+		entry := &StateEntry{
+			Stats: stage.gm.GetAllStats(),
+			Label: stage.Name,
+		}
+		allStages = append(allStages, entry)
 	}
 
 	fmt.Println()
+
+	for _, item := range allStages {
+		tracker.PrintBlockedTimeHistogram(item.Stats, item.Label)
+	}
 }

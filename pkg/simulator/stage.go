@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"github.com/AlexsanderHamir/IdleSpy/tracker"
 )
 
 // Stage represents a processing stage in the pipeline
@@ -21,6 +23,8 @@ type Stage struct {
 	MaxGeneratedItems int
 	Stop              func()
 	stopOnce          sync.Once
+
+	gm *tracker.GoroutineManager
 }
 
 // NewStage creates a new stage with the given configuration
@@ -35,6 +39,7 @@ func NewStage(name string, config *StageConfig) *Stage {
 		Config:  config,
 		Sem:     make(chan struct{}, 1),
 		Metrics: NewStageMetrics(),
+		gm:      tracker.NewGoroutineManager(),
 	}
 }
 
@@ -79,11 +84,16 @@ func (s *Stage) generatorWorker(wg *sync.WaitGroup) {
 func (s *Stage) worker(wg *sync.WaitGroup) {
 	defer s.stageTermination(wg)
 
+	id := s.gm.TrackGoroutineStart()
+	defer s.gm.TrackGoroutineEnd(id)
+
 	for {
+		startTime := time.Now()
 		select {
 		case <-s.Config.Ctx.Done():
 			return
 		case item, ok := <-s.Input:
+			s.gm.TrackSelectCase(s.Name, time.Since(startTime), id)
 			if !ok {
 				return
 			}
