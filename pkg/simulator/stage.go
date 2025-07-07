@@ -48,6 +48,7 @@ func (s *Stage) Start(ctx context.Context, wg *sync.WaitGroup) error {
 	if err := s.validateConfig(); err != nil {
 		return err
 	}
+
 	s.initializeStages(wg)
 
 	return nil
@@ -113,6 +114,8 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 	}
 }
 
+// Ensures only one goroutine calls the cancel function
+// once MaxGeneratedItems has been achieved.
 func (s *Stage) StopOnce() {
 	s.stopOnce.Do(func() {
 		s.Stop()
