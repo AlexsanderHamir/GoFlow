@@ -20,6 +20,8 @@
 - [Quick Start Example](#quick-start-example)
 - [Stats Explanation](#stats-explanation)
 - [Output](#output)
+- [Contributions](#contributions)
+- [Why GoFlow Was Created?](#why-goflow-was-created)
 
 ## Features
 
@@ -111,7 +113,7 @@ The stats will be printed to the terminal, if you want to save to a file you can
 go run main.go > output.txt
 ```
 
-## Contributing
+## Contributions
 
 We welcome contributions! Before you start contributing, please ensure you have:
 
@@ -127,7 +129,7 @@ git clone https://github.com/AlexsanderHamir/GoFlow.git
 cd GoFlow
 
 # Run tests to verify setup
- go test -v ./test 
+ go test -v ./test
 ```
 
 ### Development Guidelines
@@ -137,3 +139,9 @@ cd GoFlow
 - Follow Go code style guidelines
 - Update documentation for user-facing changes
 - Ensure all tests pass before submitting PRs
+
+## Why GoFlow Was Created?
+
+I was building a query engine where each query plan was turned into a pipeline of stages created at runtime. Each stage processed batches of data, and performance depended on the buffer sizes and number of goroutines per stage.
+
+I built GoFlow to experiment with these settings and easily visualize how they affect throughput and performance, in a way that other tools didn't allow me to do, to the same granularity.
