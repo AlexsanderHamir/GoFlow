@@ -130,7 +130,6 @@ func (s *Stage) handleWorkerOutput(result any) {
 	}
 }
 
-// validateConfig validates the stage configuration
 func (s *Stage) validateConfig() error {
 	if s.Config.WorkerFunc == nil && !s.Config.IsGenerator {
 		return fmt.Errorf("worker function not set")
@@ -143,7 +142,6 @@ func (s *Stage) validateConfig() error {
 	return nil
 }
 
-// initialize initializes the stages, both generators and workers
 func (s *Stage) initializeStages(wg *sync.WaitGroup) {
 	if s.Config.IsGenerator {
 		s.initializeGenerators(wg)
@@ -164,7 +162,7 @@ func (s *Stage) initializeWorkers(wg *sync.WaitGroup) {
 	}
 }
 
-// processItem handles a single item with retries if configured
+// processItem handles a single item with retries and delay if configured
 func (s *Stage) processItem(item any) (any, error) {
 	var lastErr error
 	attempt := 0
@@ -228,7 +226,6 @@ func collectStageStats(stage *Stage) StageStats {
 	}
 }
 
-// initializeStages initializes the stages, both generators and workers
 func (s *Simulator) initializeStages() error {
 	generator := s.Stages[0]
 	generator.MaxGeneratedItems = s.MaxGeneratedItems

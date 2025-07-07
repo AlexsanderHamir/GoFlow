@@ -8,54 +8,41 @@ import (
 
 // StageMetrics tracks performance metrics for a stage
 type StageMetrics struct {
-	mu sync.RWMutex
-
-	// Counters
+	mu             sync.RWMutex
 	ProcessedItems uint64
 	DroppedItems   uint64
 	OutputItems    uint64
-
-	// State
-	StartTime time.Time
-	EndTime   time.Time
-
-	// Generator stats
+	StartTime      time.Time
+	EndTime        time.Time
 	GeneratedItems uint64
 }
 
-// NewStageMetrics creates a new metrics collector
 func NewStageMetrics() *StageMetrics {
 	return &StageMetrics{
 		StartTime: time.Now(),
 	}
 }
 
-// RecordProcessing records the processing of an item
 func (m *StageMetrics) RecordProcessing() {
 	atomic.AddUint64(&m.ProcessedItems, 1)
 }
 
-// RecordGenerated records a generated item
 func (m *StageMetrics) RecordGenerated() {
 	atomic.AddUint64(&m.GeneratedItems, 1)
 }
 
-// RecordGeneratedBurst records a generated burst
 func (m *StageMetrics) RecordGeneratedBurst(items int) {
 	atomic.AddUint64(&m.GeneratedItems, uint64(items))
 }
 
-// RecordDropped records a dropped item
 func (m *StageMetrics) RecordDropped() {
 	atomic.AddUint64(&m.DroppedItems, 1)
 }
 
-// RecordDroppedBurst records a dropped burst
 func (m *StageMetrics) RecordDroppedBurst(items int) {
 	atomic.AddUint64(&m.DroppedItems, uint64(items))
 }
 
-// RecordOutput records a successful output
 func (m *StageMetrics) RecordOutput() {
 	atomic.AddUint64(&m.OutputItems, 1)
 }
