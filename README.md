@@ -9,7 +9,8 @@
 ![Code Size](https://img.shields.io/github/languages/code-size/AlexsanderHamir/GoFlow)
 ![Version](https://img.shields.io/github/v/tag/AlexsanderHamir/GoFlow?sort=semver)
 
-GoFlow is a pipeline visualizer that helps developers fine-tune their concurrent systems by providing statistics for each stage of the pipeline, making it easy to identify bottlenecks and performance issues.
+> ⚙️ **GoFlow** is a developer tool for simulating and visualizing Go pipeline performance—ideal for debugging buffering, throughput, and concurrency bottlenecks.
+
 
 ![Example Pipeline Visualization](example.png)
 
