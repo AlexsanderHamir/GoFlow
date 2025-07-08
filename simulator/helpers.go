@@ -131,11 +131,11 @@ func (s *Stage) handleWorkerOutput(result any) {
 }
 
 func (s *Stage) validateConfig() error {
-	if s.Config.WorkerFunc == nil && !s.Config.isGenerator {
+	if s.Config.WorkerFunc == nil && !s.isGenerator {
 		return fmt.Errorf("worker function not set")
 	}
 
-	if s.Config.isGenerator && s.Config.ItemGenerator == nil {
+	if s.isGenerator && s.Config.ItemGenerator == nil {
 		return fmt.Errorf("generator function not set")
 	}
 
@@ -143,7 +143,7 @@ func (s *Stage) validateConfig() error {
 }
 
 func (s *Stage) initializeStages(wg *sync.WaitGroup) {
-	if s.Config.isGenerator {
+	if s.isGenerator {
 		s.initializeGenerators(wg)
 	} else {
 		s.initializeWorkers(wg)
@@ -221,37 +221,9 @@ func collectStageStats(stage *Stage) StageStats {
 		DroppedItems:   getIntMetric(stats, "dropped_items"),
 		DropRate:       getFloatMetric(stats, "drop_rate") * 100,
 		GeneratedItems: getIntMetric(stats, "generated_items"),
-		isGenerator:    stage.Config.isGenerator,
+		isGenerator:    stage.isGenerator,
 		IsFinal:        stage.isFinal,
 	}
-}
-
-func (s *Simulator) initializeStages() error {
-	generator := s.stages[0]
-	generator.maxGeneratedItems = s.MaxGeneratedItems
-	generator.stop = s.Stop
-	generator.Config.isGenerator = true
-
-	lastStage := s.stages[len(s.stages)-1]
-	lastStage.isFinal = true
-
-	for i, stage := range s.stages {
-		stage.Config.ctx = s.ctx
-
-		s.wg.Add(stage.Config.RoutineNum)
-
-		beforeLastStage := i < len(s.stages)-1
-		if beforeLastStage {
-			s.stages[i+1].input = stage.output
-		}
-
-		if err := stage.Start(s.ctx, &s.wg); err != nil {
-			return fmt.Errorf("failed to start stage %s: %w", stage.Name, err)
-		}
-
-	}
-
-	return nil
 }
 
 // getIntMetric safely retrieves an integer metric, returning 0 if nil

@@ -63,7 +63,7 @@ func CheckStageAccountingConsistency(simulator *simulator.Simulator, t *testing.
 	for _, stage := range simulator.GetStages() {
 		stats := stage.GetMetrics().GetStats()
 
-		if stage.GetConfig().GetIsGenerator() {
+		if stage.GetisGenerator() {
 			output := stats["output_items"].(uint64)
 			lastStageOutput = output
 			lastStageName = stage.Name
