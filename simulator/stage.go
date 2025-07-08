@@ -98,6 +98,7 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 				s.metrics.RecordDropped()
 				break
 			}
+			s.metrics.RecordProcessed()
 
 			if !s.isFinal {
 				s.sendOutput(result)
