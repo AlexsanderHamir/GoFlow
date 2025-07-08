@@ -24,7 +24,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v4
         with:
-          version: v1.59.1
+          version: latest
 
       - name: Check formatting (go fmt)
         run: |
