@@ -21,12 +21,10 @@ jobs:
           go-version: "1.24.3"
           cache: true
 
-      - name: Install golangci-lint
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.59.1
-
       - name: Run golangci-lint
-        run: golangci-lint run ./...
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: v1.59.1
 
       - name: Check formatting (go fmt)
         run: |
