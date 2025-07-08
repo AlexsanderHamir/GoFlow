@@ -63,7 +63,7 @@ func CheckStageAccountingConsistency(simulator *simulator.Simulator, t *testing.
 	for _, stage := range simulator.GetStages() {
 		stats := stage.GetMetrics().GetStats()
 
-		if stage.GetConfig().GetIsGenerator() {
+		if stage.GetisGenerator() {
 			output := stats["output_items"].(uint64)
 			lastStageOutput = output
 			lastStageName = stage.Name
@@ -83,39 +83,4 @@ func CheckStageAccountingConsistency(simulator *simulator.Simulator, t *testing.
 
 		log.Printf("Stage %s: output=%d", stage.Name, currentOutput)
 	}
-}
-
-func CreateConfigsAndSimulatorBurst() (*simulator.StageConfig, *simulator.StageConfig, *simulator.Simulator) {
-	sim := simulator.NewSimulator()
-	sim.Duration = 10 * time.Second
-
-	generatorConfig := &simulator.StageConfig{
-		InputRate:  100 * time.Millisecond,
-		RoutineNum: 100,
-		BufferSize: 100,
-		ItemGenerator: func() any {
-			return rand.Intn(100)
-		},
-		InputBurst: func() []any {
-			sliceLen := rand.Intn(10) + 1
-			result := make([]any, sliceLen)
-			for i := range sliceLen {
-				result[i] = rand.Intn(100)
-			}
-			return result
-		},
-		BurstCountTotal: 1000,
-		BurstInterval:   100 * time.Millisecond,
-	}
-
-	globalConfig := &simulator.StageConfig{
-		RoutineNum: 100,
-		BufferSize: 100,
-		WorkerFunc: func(item any) (any, error) {
-			item = item.(int) + rand.Intn(100)
-			return item, nil
-		},
-	}
-
-	return generatorConfig, globalConfig, sim
 }

@@ -22,16 +22,5 @@ func TestSimulatorGeneratedStatsConsistency(t *testing.T) {
 
 			CheckStageAccountingConsistency(simulator, t)
 		})
-
-		t.Run(fmt.Sprintf("Iteration_%d_Burst", i+1), func(t *testing.T) {
-			generatorConfig, globalConfig, simulator := CreateConfigsAndSimulatorBurst()
-			CreateStages(simulator, generatorConfig, globalConfig)
-
-			if err := simulator.Start(); err != nil {
-				log.Fatalf("Failed to start simulator in iteration %d: %v", i+1, err)
-			}
-
-			CheckStageAccountingConsistency(simulator, t)
-		})
 	}
 }

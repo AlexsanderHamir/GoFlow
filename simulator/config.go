@@ -5,39 +5,36 @@ import (
 	"time"
 )
 
-// StageConfig holds the configuration for a pipeline stage
+// StageConfig holds the configuration for a pipeline stage,
+// it can be shared among all pipelines.
 type StageConfig struct {
+
 	// Rate at which items are generated (generator only)
 	InputRate time.Duration
-	// Custom item generator function
-	ItemGenerator func() any
 
-	// Handles load spikes and burst patterns
-	// Generates input bursts at intervals
-	InputBurst func() []any
-	// Total number of bursts to inject
-	BurstCountTotal int
-	// Interval between bursts
-	BurstInterval time.Duration
+	// Custom item generator function  (generator only)
+	ItemGenerator func() any
 
 	// Number of goroutines per stage
 	RoutineNum int
+
 	// Channel buffer size per stage
 	BufferSize int
+
 	// Simulated delay per item
 	WorkerDelay time.Duration
-	// Number of times to retry on error
+
+	// Number of times to retry on error, since your custom function
+	// could fail.
 	RetryCount int
 
-	// Drop input if channel is full
+	// Drop input if channel is full, when not set to drop it will block
+	// in case the channels are full.
 	DropOnBackpressure bool
 
-	// Core processing function
-	// Worker function that processes each item
+	// Custom worker function that processes each item
 	WorkerFunc func(item any) (any, error)
 
-	// Whether the stage is a generator
-	isGenerator bool
 	// Context for cancellation and deadlines
 	ctx context.Context
 }
@@ -50,8 +47,4 @@ func DefaultConfig() *StageConfig {
 		RetryCount:         0,
 		DropOnBackpressure: false,
 	}
-}
-
-func (c *StageConfig) GetIsGenerator() bool {
-	return c.isGenerator
 }

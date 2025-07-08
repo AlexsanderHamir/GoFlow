@@ -1,19 +1,14 @@
 ## ✅ Technical Quality
 
-- [ ] Codebase is well-structured with clear module boundaries
+- [x] Codebase is well-structured with clear module boundaries
   - [x] codebase structure
   - [x] Library exposition
-    - [x] config
-    - [x] simulator
-    - [x] metrics
-    - [x] stage
-- [ ] Consistent and descriptive naming conventions
+- [ ] Code/design reviews (PRs reviewed before merge)
 - [ ] Good test coverage (unit, integration, fuzz)
 - [ ] CI pipeline for running tests (e.g. GitHub Actions)
 - [ ] Benchmarks or performance tests where applicable
 - [ ] Linting and formatting tools configured (`golangci-lint`, `go fmt`)
 - [ ] Static analysis tools (`go vet`, `staticcheck`)
-- [ ] Code/design reviews (PRs reviewed before merge)
 
 ---
 

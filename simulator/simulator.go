@@ -17,14 +17,7 @@ import (
 // both time-based and item-count-based termination conditions.
 type Simulator struct {
 	// Duration specifies how long the simulation should run.
-	// If set to a positive value, the simulation will automatically stop
-	// after this duration. Mutually exclusive with MaxGeneratedItems.
 	Duration time.Duration
-
-	// MaxGeneratedItems is the maximum number of items to generate before stopping.
-	// If set to a positive value, the simulation will stop once this many items
-	// have been generated. Mutually exclusive with Duration.
-	MaxGeneratedItems int
 
 	// Stages contains all the processing stages in the pipeline, ordered
 	// from first (generator) to last (final stage).
@@ -106,9 +99,6 @@ func (s *Simulator) AddStage(stage *Stage) error {
 //
 // Returns:
 //   - error: nil if successful, or an error describing the failure
-//
-// Panics:
-//   - If both Duration and MaxGeneratedItems are set to positive values
 func (s *Simulator) Start() error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -122,12 +112,7 @@ func (s *Simulator) Start() error {
 	}
 
 	go func() {
-		if s.MaxGeneratedItems > 0 && s.Duration > 0 {
-			panic("either duration or max generated items must be set, not both")
-		}
-
-		durationActive := s.MaxGeneratedItems <= 0 && s.Duration > 0
-		if durationActive {
+		if s.Duration > 0 {
 			time.Sleep(s.Duration)
 			s.Stop()
 		}
@@ -161,7 +146,6 @@ func (s *Simulator) WaitForStats() {
 func (s *Simulator) GetStages() []*Stage {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-
 	return s.stages
 }
 
@@ -170,11 +154,11 @@ type StateEntry struct {
 	Label string
 }
 
-// PrintStats displays comprehensive statistics for all stages in the pipeline.
+// PrintStats displays statistics for all stages in the pipeline.
 //
 // The statistics include:
-//   - Processed items count
-//   - Output items count
+//   - Processed: Items processed but not yet sent
+//   - Output: Items processed and successfully sent to next stage
 //   - Throughput (items per second)
 //   - Dropped items count
 //   - Drop rate percentage
@@ -189,6 +173,7 @@ func (s *Simulator) PrintStats() {
 
 	var prev *StageStats
 	allStages := []*StateEntry{}
+
 	for _, stage := range stages {
 		current := collectStageStats(stage)
 		procDiff, thruDiff := computeDiffs(prev, &current)
@@ -206,4 +191,36 @@ func (s *Simulator) PrintStats() {
 	for _, item := range allStages {
 		tracker.PrintBlockedTimeHistogram(item.Stats, item.Label)
 	}
+}
+
+// Responsible for initializing all stages,
+// this method will consider the first stage the generator
+// and the last one the dummy stage, both serve an important role,
+// the generator feeds data into the pipeline and the dummy removes
+// from it, allowing you to focus only on the desired stages.
+func (s *Simulator) initializeStages() error {
+	generator := s.stages[0]
+	generator.stop = s.Stop
+	generator.isGenerator = true
+
+	lastStage := s.stages[len(s.stages)-1]
+	lastStage.isFinal = true
+
+	for i, stage := range s.stages {
+		stage.Config.ctx = s.ctx
+
+		s.wg.Add(stage.Config.RoutineNum)
+
+		beforeLastStage := i < len(s.stages)-1
+		if beforeLastStage {
+			s.stages[i+1].input = stage.output
+		}
+
+		if err := stage.Start(s.ctx, &s.wg); err != nil {
+			return fmt.Errorf("failed to start stage %s: %w", stage.Name, err)
+		}
+
+	}
+
+	return nil
 }
