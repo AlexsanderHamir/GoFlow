@@ -20,11 +20,7 @@ func TestSimulatorGeneratedStatsConsistency(t *testing.T) {
 				log.Fatalf("Failed to start simulator in iteration %d: %v", i+1, err)
 			}
 
-			<-simulator.Done()
-
 			CheckStageAccountingConsistency(simulator, t)
-
-			simulator.Stop()
 		})
 
 		t.Run(fmt.Sprintf("Iteration_%d_Burst", i+1), func(t *testing.T) {
@@ -35,11 +31,7 @@ func TestSimulatorGeneratedStatsConsistency(t *testing.T) {
 				log.Fatalf("Failed to start simulator in iteration %d: %v", i+1, err)
 			}
 
-			<-simulator.Done()
-
 			CheckStageAccountingConsistency(simulator, t)
-
-			simulator.Stop()
 		})
 	}
 }

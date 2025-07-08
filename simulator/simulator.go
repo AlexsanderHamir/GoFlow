@@ -28,30 +28,30 @@ type Simulator struct {
 
 	// Stages contains all the processing stages in the pipeline, ordered
 	// from first (generator) to last (final stage).
-	Stages []*Stage
+	stages []*Stage
 
 	// Mu protects access to the Stages slice and other shared state
-	Mu sync.RWMutex
+	mu sync.RWMutex
 
 	// Ctx provides cancellation context for all stages
-	Ctx context.Context
+	ctx context.Context
 
 	// Cancel function to stop all stages gracefully
-	Cancel context.CancelFunc
+	cancel context.CancelFunc
 
 	// Quit channel is closed when the simulation completes
-	Quit chan struct{}
+	quit chan struct{}
 
 	// Wg tracks all running goroutines for proper cleanup
-	Wg sync.WaitGroup
+	wg sync.WaitGroup
 }
 
 func NewSimulator() *Simulator {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Simulator{
-		Ctx:    ctx,
-		Cancel: cancel,
-		Quit:   make(chan struct{}),
+		ctx:    ctx,
+		cancel: cancel,
+		quit:   make(chan struct{}),
 	}
 }
 
@@ -72,8 +72,8 @@ func NewSimulator() *Simulator {
 //   - Stage name cannot be empty
 //   - Stage name must be unique within the pipeline
 func (s *Simulator) AddStage(stage *Stage) error {
-	s.Mu.Lock()
-	defer s.Mu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	if stage == nil {
 		return fmt.Errorf("stage cannot be nil")
@@ -83,13 +83,13 @@ func (s *Simulator) AddStage(stage *Stage) error {
 		return fmt.Errorf("stage name cannot be empty")
 	}
 
-	for _, existingStage := range s.Stages {
+	for _, existingStage := range s.stages {
 		if existingStage.Name == stage.Name {
 			return fmt.Errorf("stage with name %s already exists", stage.Name)
 		}
 	}
 
-	s.Stages = append(s.Stages, stage)
+	s.stages = append(s.stages, stage)
 	return nil
 }
 
@@ -110,10 +110,10 @@ func (s *Simulator) AddStage(stage *Stage) error {
 // Panics:
 //   - If both Duration and MaxGeneratedItems are set to positive values
 func (s *Simulator) Start() error {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-	if len(s.Stages) == 0 {
+	if len(s.stages) == 0 {
 		return fmt.Errorf("no stages to run")
 	}
 
@@ -132,8 +132,8 @@ func (s *Simulator) Start() error {
 			s.Stop()
 		}
 
-		s.Wg.Wait()
-		close(s.Quit)
+		s.wg.Wait()
+		close(s.quit)
 	}()
 
 	s.WaitForStats()
@@ -143,12 +143,12 @@ func (s *Simulator) Start() error {
 
 // Stop terminates the simulation by canceling the context.
 func (s *Simulator) Stop() {
-	s.Cancel()
+	s.cancel()
 }
 
 // Done returns a channel that is closed when the simulation completes.
 func (s *Simulator) Done() <-chan struct{} {
-	return s.Quit
+	return s.quit
 }
 
 // WaitForStats blocks until the simulation completes and then prints statistics.
@@ -159,10 +159,10 @@ func (s *Simulator) WaitForStats() {
 
 // GetStages returns a copy of all stages in the pipeline.
 func (s *Simulator) GetStages() []*Stage {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-	return s.Stages
+	return s.stages
 }
 
 type StateEntry struct {

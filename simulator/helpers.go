@@ -8,7 +8,7 @@ import (
 )
 
 // StageStats represents the statistics for a single stage
-type StageStats struct {
+type StageStats struct { // CODE REVIEW
 	StageName      string
 	ProcessedItems uint64
 	OutputItems    uint64
@@ -18,7 +18,7 @@ type StageStats struct {
 	GeneratedItems uint64
 	ThruDiffPct    float64
 	ProcDiffPct    float64
-	IsGenerator    bool
+	isGenerator    bool
 	IsFinal        bool
 }
 
@@ -28,25 +28,25 @@ func (s *Stage) processBurst(items []any) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			s.Metrics.RecordDroppedBurst(len(items) - processedItems)
+			s.metrics.RecordDroppedBurst(len(items) - processedItems)
 		}
 	}()
 
 	for _, item := range items {
 		select {
-		case <-s.Config.Ctx.Done():
-			s.Metrics.RecordDroppedBurst(len(items) - processedItems)
+		case <-s.Config.ctx.Done():
+			s.metrics.RecordDroppedBurst(len(items) - processedItems)
 			return
-		case s.Output <- item:
+		case s.output <- item:
 			processedItems++
-			s.Metrics.RecordOutput()
+			s.metrics.RecordOutput()
 		default:
 			if s.Config.DropOnBackpressure {
-				s.Metrics.RecordDropped()
+				s.metrics.RecordDropped()
 			} else {
-				s.Output <- item
+				s.output <- item
 				processedItems++
-				s.Metrics.RecordOutput()
+				s.metrics.RecordOutput()
 			}
 		}
 	}
@@ -66,7 +66,7 @@ func (s *Stage) shouldExecuteBurst(burstCount int, lastBurstTime time.Time) bool
 func (s *Stage) processRegularGeneration() {
 	defer func() {
 		if r := recover(); r != nil {
-			s.Metrics.RecordDropped()
+			s.metrics.RecordDropped()
 		}
 	}()
 
@@ -79,19 +79,19 @@ func (s *Stage) processRegularGeneration() {
 	}
 
 	item := s.Config.ItemGenerator()
-	s.Metrics.RecordGenerated()
+	s.metrics.RecordGenerated()
 	select {
-	case <-s.Config.Ctx.Done():
-		s.Metrics.RecordDropped()
+	case <-s.Config.ctx.Done():
+		s.metrics.RecordDropped()
 		return
-	case s.Output <- item:
-		s.Metrics.RecordOutput()
+	case s.output <- item:
+		s.metrics.RecordOutput()
 	default:
 		if s.Config.DropOnBackpressure {
-			s.Metrics.RecordDropped()
+			s.metrics.RecordDropped()
 		} else {
-			s.Output <- item
-			s.Metrics.RecordOutput()
+			s.output <- item
+			s.metrics.RecordOutput()
 		}
 	}
 }
@@ -100,7 +100,7 @@ func (s *Stage) processRegularGeneration() {
 func (s *Stage) processWorkerItem(item any) (any, error) {
 	result, err := s.processItem(item)
 	if result != nil {
-		s.Metrics.RecordProcessing()
+		s.metrics.RecordProcessing()
 	}
 
 	return result, err
@@ -110,32 +110,32 @@ func (s *Stage) processWorkerItem(item any) (any, error) {
 func (s *Stage) handleWorkerOutput(result any) {
 	defer func() {
 		if r := recover(); r != nil {
-			s.Metrics.RecordDropped()
+			s.metrics.RecordDropped()
 		}
 	}()
 
 	select {
-	case <-s.Config.Ctx.Done():
-		s.Metrics.RecordDropped()
+	case <-s.Config.ctx.Done():
+		s.metrics.RecordDropped()
 		return
-	case s.Output <- result:
-		s.Metrics.RecordOutput()
+	case s.output <- result:
+		s.metrics.RecordOutput()
 	default:
 		if s.Config.DropOnBackpressure {
-			s.Metrics.RecordDropped()
+			s.metrics.RecordDropped()
 		} else {
-			s.Output <- result
-			s.Metrics.RecordOutput()
+			s.output <- result
+			s.metrics.RecordOutput()
 		}
 	}
 }
 
 func (s *Stage) validateConfig() error {
-	if s.Config.WorkerFunc == nil && !s.Config.IsGenerator {
+	if s.Config.WorkerFunc == nil && !s.Config.isGenerator {
 		return fmt.Errorf("worker function not set")
 	}
 
-	if s.Config.IsGenerator && s.Config.ItemGenerator == nil {
+	if s.Config.isGenerator && s.Config.ItemGenerator == nil {
 		return fmt.Errorf("generator function not set")
 	}
 
@@ -143,7 +143,7 @@ func (s *Stage) validateConfig() error {
 }
 
 func (s *Stage) initializeStages(wg *sync.WaitGroup) {
-	if s.Config.IsGenerator {
+	if s.Config.isGenerator {
 		s.initializeGenerators(wg)
 	} else {
 		s.initializeWorkers(wg)
@@ -189,14 +189,14 @@ func (s *Stage) processItem(item any) (any, error) {
 }
 
 func (s *Stage) GetMetrics() *StageMetrics {
-	return s.Metrics
+	return s.metrics
 }
 
 func (s *Stage) stageTermination(wg *sync.WaitGroup) {
 	select {
-	case s.Sem <- struct{}{}:
-		close(s.Output)
-		s.Metrics.Stop()
+	case s.sem <- struct{}{}:
+		close(s.output)
+		s.metrics.Stop()
 	default:
 	}
 
@@ -205,7 +205,7 @@ func (s *Stage) stageTermination(wg *sync.WaitGroup) {
 
 func (s *Stage) executeBurst(burstCount *int, lastBurstTime *time.Time) {
 	items := s.Config.InputBurst()
-	s.Metrics.RecordGeneratedBurst(len(items))
+	s.metrics.RecordGeneratedBurst(len(items))
 	s.processBurst(items)
 	*burstCount++
 	*lastBurstTime = time.Now()
@@ -221,31 +221,31 @@ func collectStageStats(stage *Stage) StageStats {
 		DroppedItems:   getIntMetric(stats, "dropped_items"),
 		DropRate:       getFloatMetric(stats, "drop_rate") * 100,
 		GeneratedItems: getIntMetric(stats, "generated_items"),
-		IsGenerator:    stage.Config.IsGenerator,
-		IsFinal:        stage.IsFinal,
+		isGenerator:    stage.Config.isGenerator,
+		IsFinal:        stage.isFinal,
 	}
 }
 
 func (s *Simulator) initializeStages() error {
-	generator := s.Stages[0]
-	generator.MaxGeneratedItems = s.MaxGeneratedItems
-	generator.Stop = s.Stop
-	generator.Config.IsGenerator = true
+	generator := s.stages[0]
+	generator.maxGeneratedItems = s.MaxGeneratedItems
+	generator.stop = s.Stop
+	generator.Config.isGenerator = true
 
-	lastStage := s.Stages[len(s.Stages)-1]
-	lastStage.IsFinal = true
+	lastStage := s.stages[len(s.stages)-1]
+	lastStage.isFinal = true
 
-	for i, stage := range s.Stages {
-		stage.Config.Ctx = s.Ctx
+	for i, stage := range s.stages {
+		stage.Config.ctx = s.ctx
 
-		s.Wg.Add(stage.Config.RoutineNum)
+		s.wg.Add(stage.Config.RoutineNum)
 
-		beforeLastStage := i < len(s.Stages)-1
+		beforeLastStage := i < len(s.stages)-1
 		if beforeLastStage {
-			s.Stages[i+1].Input = stage.Output
+			s.stages[i+1].input = stage.output
 		}
 
-		if err := stage.Start(s.Ctx, &s.Wg); err != nil {
+		if err := stage.Start(s.ctx, &s.wg); err != nil {
 			return fmt.Errorf("failed to start stage %s: %w", stage.Name, err)
 		}
 
@@ -282,8 +282,8 @@ func computeDiffs(prev, curr *StageStats) (procDiffStr, thruDiffStr string) {
 	}
 
 	// Skip Generator and DummyStage
-	if curr.IsGenerator || curr.IsFinal ||
-		prev.IsGenerator || prev.IsFinal {
+	if curr.isGenerator || curr.IsFinal ||
+		prev.isGenerator || prev.IsFinal {
 		return
 	}
 

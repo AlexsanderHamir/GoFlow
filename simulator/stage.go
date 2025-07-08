@@ -11,20 +11,24 @@ import (
 // Stage represents a processing stage in the pipeline
 type Stage struct {
 	Name string
-
-	Input  chan any
-	Output chan any
-	Sem    chan struct{}
-
 	Config  *StageConfig
-	Metrics *StageMetrics
 
-	IsFinal           bool
-	MaxGeneratedItems int
-	Stop              func()
+	input  chan any
+	output chan any
+	sem    chan struct{}
+
+	metrics *StageMetrics
+
+	isFinal           bool
+	maxGeneratedItems int
+	stop              func()
 	stopOnce          sync.Once
 
 	gm *tracker.GoroutineManager
+}
+
+func (s *Stage) GetConfig() *StageConfig {
+	return s.Config
 }
 
 // NewStage creates a new stage with the given configuration
@@ -35,10 +39,10 @@ func NewStage(name string, config *StageConfig) *Stage {
 
 	return &Stage{
 		Name:    name,
-		Output:  make(chan any, config.BufferSize),
+		output:  make(chan any, config.BufferSize),
 		Config:  config,
-		Sem:     make(chan struct{}, 1),
-		Metrics: NewStageMetrics(),
+		sem:     make(chan struct{}, 1),
+		metrics: NewStageMetrics(),
 		gm:      tracker.NewGoroutineManager(),
 	}
 }
@@ -63,10 +67,10 @@ func (s *Stage) generatorWorker(wg *sync.WaitGroup) {
 
 	for {
 		select {
-		case <-s.Config.Ctx.Done():
+		case <-s.Config.ctx.Done():
 			return
 		default:
-			if s.MaxGeneratedItems > 0 && s.Metrics.GeneratedItems >= uint64(s.MaxGeneratedItems) {
+			if s.maxGeneratedItems > 0 && s.metrics.generatedItems >= uint64(s.maxGeneratedItems) {
 				s.StopOnce()
 				continue
 			}
@@ -91,9 +95,9 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 	for {
 		startTime := time.Now()
 		select {
-		case <-s.Config.Ctx.Done():
+		case <-s.Config.ctx.Done():
 			return
-		case item, ok := <-s.Input:
+		case item, ok := <-s.input:
 			s.gm.TrackSelectCase(s.Name, time.Since(startTime), id)
 			if !ok {
 				return
@@ -101,14 +105,14 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 
 			result, err := s.processWorkerItem(item)
 			if err != nil {
-				s.Metrics.RecordDropped()
+				s.metrics.RecordDropped()
 				continue
 			}
 
-			if !s.IsFinal {
+			if !s.isFinal {
 				s.handleWorkerOutput(result)
 			} else {
-				s.Metrics.RecordDropped()
+				s.metrics.RecordDropped()
 			}
 		}
 	}
@@ -118,6 +122,6 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 // once MaxGeneratedItems has been achieved.
 func (s *Stage) StopOnce() {
 	s.stopOnce.Do(func() {
-		s.Stop()
+		s.stop()
 	})
 }

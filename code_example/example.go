@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/AlexsanderHamir/GoFlow/pkg/simulator"
+	"github.com/AlexsanderHamir/GoFlow/simulator"
 )
 
 func Example() {

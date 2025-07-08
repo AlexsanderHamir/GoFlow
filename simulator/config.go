@@ -31,14 +31,15 @@ type StageConfig struct {
 
 	// Drop input if channel is full
 	DropOnBackpressure bool
-	// Whether the stage is a generator
-	IsGenerator bool
 
 	// Core processing function
 	// Worker function that processes each item
 	WorkerFunc func(item any) (any, error)
+
+	// Whether the stage is a generator
+	isGenerator bool
 	// Context for cancellation and deadlines
-	Ctx context.Context
+	ctx context.Context
 }
 
 // DefaultConfig returns a new SimulationConfig with sensible defaults
@@ -49,4 +50,8 @@ func DefaultConfig() *StageConfig {
 		RetryCount:         0,
 		DropOnBackpressure: false,
 	}
+}
+
+func (c *StageConfig) GetIsGenerator() bool {
+	return c.isGenerator
 }

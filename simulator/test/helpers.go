@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/GoFlow/pkg/simulator"
+	"github.com/AlexsanderHamir/GoFlow/simulator"
 )
 
 func CreateConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig, *simulator.Simulator) {
@@ -14,10 +14,9 @@ func CreateConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig
 	sim.Duration = 10 * time.Second
 
 	generatorConfig := &simulator.StageConfig{
-		InputRate:   100 * time.Millisecond,
-		RoutineNum:  100,
-		BufferSize:  100,
-		IsGenerator: true,
+		InputRate:  100 * time.Millisecond,
+		RoutineNum: 100,
+		BufferSize: 100,
 		ItemGenerator: func() any {
 			return rand.Intn(100)
 		},
@@ -61,10 +60,10 @@ func CheckStageAccountingConsistency(simulator *simulator.Simulator, t *testing.
 	var lastStageOutput uint64
 	var lastStageName string
 
-	for _, stage := range simulator.Stages {
+	for _, stage := range simulator.GetStages() {
 		stats := stage.GetMetrics().GetStats()
 
-		if stage.Config.IsGenerator {
+		if stage.GetConfig().GetIsGenerator() {
 			output := stats["output_items"].(uint64)
 			lastStageOutput = output
 			lastStageName = stage.Name
@@ -91,10 +90,9 @@ func CreateConfigsAndSimulatorBurst() (*simulator.StageConfig, *simulator.StageC
 	sim.Duration = 10 * time.Second
 
 	generatorConfig := &simulator.StageConfig{
-		InputRate:   100 * time.Millisecond,
-		RoutineNum:  100,
-		BufferSize:  100,
-		IsGenerator: true,
+		InputRate:  100 * time.Millisecond,
+		RoutineNum: 100,
+		BufferSize: 100,
 		ItemGenerator: func() any {
 			return rand.Intn(100)
 		},
@@ -121,4 +119,3 @@ func CreateConfigsAndSimulatorBurst() (*simulator.StageConfig, *simulator.StageC
 
 	return generatorConfig, globalConfig, sim
 }
-
