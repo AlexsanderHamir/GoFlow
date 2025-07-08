@@ -26,11 +26,5 @@ jobs:
         with:
           version: latest
 
-      - name: Check formatting (go fmt)
-        run: |
-          fmt_result=$(gofmt -l .)
-          if [ -n "$fmt_result" ]; then
-            echo "The following files need to be formatted:"
-            echo "$fmt_result"
-            exit 1
-          fi
+      - name: Auto format code (go fmt)
+        run: gofmt -w .

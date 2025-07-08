@@ -37,7 +37,6 @@ func createConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig
 	return generatorConfig, globalConfig, sim
 }
 
-
 func createStages(t *testing.T, sim *simulator.Simulator, generatorConfig *simulator.StageConfig, globalConfig *simulator.StageConfig) {
 	stage1 := simulator.NewStage("Generator", generatorConfig)
 	stage2 := simulator.NewStage("Stage-1", globalConfig)
