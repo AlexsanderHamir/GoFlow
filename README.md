@@ -19,7 +19,7 @@
 - [Installation](#installation)
 - [Usage Example](#usage-example)
 - [Stats Explanation](#stats-explanation)
-- [Simulation Output](#output)
+- [Simulation Output](#simulation-output)
 - [Contributions](#contributions)
 - [Why GoFlow Was Created?](#why-goflow-was-created)
 
