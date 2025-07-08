@@ -162,7 +162,7 @@ func (s *Stage) sendOutput(result any) {
 		if s.Config.DropOnBackpressure {
 			s.metrics.RecordDropped()
 		} else {
-			s.output <- result
+			s.output <- result // blocks
 			s.metrics.RecordOutput()
 		}
 	}

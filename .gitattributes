@@ -1,9 +1,7 @@
 # Exclude files from releases
 code_example/ export-ignore
-code_example/** export-ignore
 
-test/ export-ignore
-test/** export-ignore
+simulator/test/ export-ignore
 
 LICENSE export-ignore
 
