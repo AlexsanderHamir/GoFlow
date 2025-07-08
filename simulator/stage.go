@@ -86,8 +86,6 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 		startTime := time.Now()
 		select {
 		case <-s.Config.ctx.Done():
-			// there may be items on the stage's input channel that we're leaving behind
-			// which may create some inconsistencies on the stats.
 			return
 		case item, ok := <-s.input:
 			s.gm.TrackSelectCase(s.Name, time.Since(startTime), id)
@@ -134,13 +132,13 @@ func (s *Stage) handleGeneration() {
 	select {
 	case <-s.Config.ctx.Done():
 		s.metrics.RecordDropped()
-	case s.output <- item:
+	case s.output <- item: // blocks
 		s.metrics.RecordOutput()
 	default:
 		if s.Config.DropOnBackpressure {
 			s.metrics.RecordDropped()
 		} else {
-			s.output <- item // blocks
+			s.output <- item
 			s.metrics.RecordOutput()
 		}
 	}

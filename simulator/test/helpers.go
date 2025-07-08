@@ -66,8 +66,16 @@ func CheckStageAccountingConsistency(simulator *simulator.Simulator, t *testing.
 
 		if stage.GetisGenerator() {
 			output := stats["output_items"].(uint64)
+			generated := stats["generated_items"].(uint64)
+			dropped := stats["dropped_items"].(uint64)
 			lastStageOutput = output
 			lastStageName = stage.Name
+
+			totalProcessed := output + dropped
+
+			if totalProcessed != generated {
+				t.Fatalf("Generator Inconsistency: output(%d) + dropped(%d) = %d, different than generated: %d \n error priority: %s", output, dropped, totalProcessed, generated, PriorityMedium)
+			}
 			continue
 		}
 
