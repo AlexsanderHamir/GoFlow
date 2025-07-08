@@ -89,6 +89,7 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 			}
 			s.metrics.recordProcessed()
 
+			// why is the final stage processing the items ?
 			if !s.isFinal {
 				s.sendOutput(result)
 				break

@@ -10,11 +10,15 @@ import (
 
 // Example implements a complete example of how to use the library.
 func Example() {
+
 	// Create simulator
 	sim := simulator.NewSimulator()
-	sim.Duration = 10 * time.Second
+	sim.Duration = 10 * time.Second // simulation duration
 
 	// Create configuration for generator stage
+	// The first stage will be considered the generator stage,
+	// its stats won't be accounted for, responsible for feeding
+	// data into the pipeline.
 	generatorConfig := &simulator.StageConfig{
 		InputRate:  100 * time.Millisecond,
 		RoutineNum: 100,
@@ -23,9 +27,6 @@ func Example() {
 			return rand.Intn(100)
 		},
 	}
-
-	// The first stage will be considered the generator stage,
-	// responsible for feeding data into the pipeline.
 	stage1 := simulator.NewStage("Generators", generatorConfig)
 
 	// Create configuration for other stages
