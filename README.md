@@ -55,7 +55,7 @@ For a detailed example, see [example.go](code_example/example.go).
 - **Δ%**: Percentage difference in comparison with the stage before the current one.
 - **Goroutines**: The total amount of time the spent blocked per goroutine, represented by a histogram.
 
-## Output
+## Simulation Output
 
 The stats will be printed to the terminal, if you want to save to a file you can do the following:
 
