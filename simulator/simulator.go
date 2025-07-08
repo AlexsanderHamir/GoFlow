@@ -2,6 +2,7 @@ package simulator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -69,17 +70,21 @@ func (s *Simulator) AddStage(stage *Stage) error {
 	defer s.mu.Unlock()
 
 	if stage == nil {
-		return fmt.Errorf("stage cannot be nil")
+		return errors.New("stage cannot be nil")
 	}
 
 	if stage.Name == "" {
-		return fmt.Errorf("stage name cannot be empty")
+		return errors.New("stage name cannot be empty")
 	}
 
 	for _, existingStage := range s.stages {
 		if existingStage.Name == stage.Name {
-			return fmt.Errorf("stage with name %s already exists", stage.Name)
+			return fmt.Errorf("repeated name not allowed: %s", stage.Name)
 		}
+	}
+
+	if stage.Config == nil {
+		return errors.New("must provide configuration")
 	}
 
 	s.stages = append(s.stages, stage)
@@ -219,10 +224,11 @@ func (s *Simulator) initializeStages() error {
 			s.stages[i+1].input = stage.output
 		}
 
-		if err := stage.Start(s.ctx, &s.wg); err != nil {
-			return fmt.Errorf("failed to start stage %s: %w", stage.Name, err)
+		if err := stage.validateConfig(); err != nil {
+			return err
 		}
 
+		stage.initializeStage(&s.wg)
 	}
 
 	return nil

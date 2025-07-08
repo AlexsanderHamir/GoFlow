@@ -1,7 +1,6 @@
 package simulator
 
 import (
-	"context"
 	"errors"
 	"sync"
 	"time"
@@ -46,17 +45,6 @@ func NewStage(name string, config *StageConfig) *Stage {
 		metrics: NewStageMetrics(),
 		gm:      tracker.NewGoroutineManager(),
 	}
-}
-
-// Start initializes the workers and generators for all stages
-func (s *Stage) Start(ctx context.Context, wg *sync.WaitGroup) error {
-	if err := s.validateConfig(); err != nil {
-		return err
-	}
-
-	s.initializeStages(wg)
-
-	return nil
 }
 
 // generatorWorker is the worker for the generators
@@ -176,7 +164,7 @@ func (s *Stage) validateConfig() error {
 	}
 
 	if s.isGenerator && cfg.ItemGenerator == nil {
-		return errors.New("item generator must be set for generator stages")
+		return errors.New("ItemGenerator must be set for generator stage")
 	}
 
 	if cfg.RoutineNum <= 0 {
@@ -206,7 +194,7 @@ func (s *Stage) validateConfig() error {
 	return nil
 }
 
-func (s *Stage) initializeStages(wg *sync.WaitGroup) {
+func (s *Stage) initializeStage(wg *sync.WaitGroup) {
 	if s.isGenerator {
 		s.initializeGenerators(wg)
 	} else {

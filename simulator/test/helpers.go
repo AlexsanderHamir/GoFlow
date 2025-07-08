@@ -79,10 +79,15 @@ func CheckStageAccountingConsistency(simulator *simulator.Simulator, t *testing.
 			continue
 		}
 
+		currentProcessed := stats["processed_items"].(uint64)
 		currentOutput := stats["output_items"].(uint64)
 		currentDropped := stats["dropped_items"].(uint64)
-
 		currentStageTotalReceived := currentOutput + currentDropped
+
+		if currentProcessed > currentStageTotalReceived {
+			t.Fatalf("processed_items(%d), can't be bigger than output + dropped(%d) \n error priority: %s", currentProcessed, currentStageTotalReceived, PriorityHigh)
+		}
+
 		if lastStageOutput != currentStageTotalReceived {
 			t.Fatalf("%s output %d does not match current %s total %d \n missing count: %d \n error priority: %s", lastStageName, lastStageOutput, stage.Name, currentStageTotalReceived, lastStageOutput-currentStageTotalReceived, PriorityLow)
 		}
