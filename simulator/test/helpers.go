@@ -11,7 +11,7 @@ import (
 
 func CreateConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig, *simulator.Simulator) {
 	sim := simulator.NewSimulator()
-	sim.Duration = 3 * time.Second
+	sim.Duration = 2 * time.Second
 
 	generatorConfig := &simulator.StageConfig{
 		InputRate:  100 * time.Millisecond,
@@ -73,9 +73,9 @@ func CheckStageAccountingConsistency(simulator *simulator.Simulator, t *testing.
 		currentOutput := stats["output_items"].(uint64)
 		currentDropped := stats["dropped_items"].(uint64)
 
-		total := currentOutput + currentDropped
-		if lastStageOutput != total {
-			t.Fatalf("%s last output %d does not match current stage %s total %d", lastStageName, lastStageOutput, stage.Name, total)
+		currentStageTotalReceived := currentOutput + currentDropped
+		if lastStageOutput != currentStageTotalReceived {
+			t.Fatalf("%s output %d does not match current %s total %d \n missing count: %d \n error priority: %s", lastStageName, lastStageOutput, stage.Name, currentStageTotalReceived, lastStageOutput-currentStageTotalReceived, PriorityLow)
 		}
 
 		lastStageOutput = currentOutput
