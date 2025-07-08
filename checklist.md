@@ -6,7 +6,7 @@
 - [x] Code/design reviews (PRs reviewed before merge)
 - [x] Good test coverage (unit, integration, fuzz)
 - [x] CI pipeline for running tests (e.g. GitHub Actions)
-- [ ] Benchmarks or performance tests where applicable
+- [none] Benchmarks or performance tests where applicable
 - [ ] Linting and formatting tools configured (`golangci-lint`, `go fmt`)
 - [ ] Static analysis tools (`go vet`, `staticcheck`)
 

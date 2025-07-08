@@ -1,0 +1,37 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Run Go Linters
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.3"
+
+      - name: Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.59.1
+
+      - name: Run golangci-lint
+        run: golangci-lint run ./...
+
+      - name: Check formatting (go fmt)
+        run: |
+          fmt_result=$(gofmt -l .)
+          if [ -n "$fmt_result" ]; then
+            echo "The following files need to be formatted:"
+            echo "$fmt_result"
+            exit 1
+          fi
