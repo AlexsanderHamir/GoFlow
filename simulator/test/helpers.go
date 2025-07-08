@@ -84,38 +84,3 @@ func CheckStageAccountingConsistency(simulator *simulator.Simulator, t *testing.
 		log.Printf("Stage %s: output=%d", stage.Name, currentOutput)
 	}
 }
-
-func CreateConfigsAndSimulatorBurst() (*simulator.StageConfig, *simulator.StageConfig, *simulator.Simulator) {
-	sim := simulator.NewSimulator()
-	sim.Duration = 10 * time.Second
-
-	generatorConfig := &simulator.StageConfig{
-		InputRate:  100 * time.Millisecond,
-		RoutineNum: 100,
-		BufferSize: 100,
-		ItemGenerator: func() any {
-			return rand.Intn(100)
-		},
-		InputBurst: func() []any {
-			sliceLen := rand.Intn(10) + 1
-			result := make([]any, sliceLen)
-			for i := range sliceLen {
-				result[i] = rand.Intn(100)
-			}
-			return result
-		},
-		BurstCountTotal: 1000,
-		BurstInterval:   100 * time.Millisecond,
-	}
-
-	globalConfig := &simulator.StageConfig{
-		RoutineNum: 100,
-		BufferSize: 100,
-		WorkerFunc: func(item any) (any, error) {
-			item = item.(int) + rand.Intn(100)
-			return item, nil
-		},
-	}
-
-	return generatorConfig, globalConfig, sim
-}

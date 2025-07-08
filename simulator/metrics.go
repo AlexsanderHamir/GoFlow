@@ -31,16 +31,8 @@ func (m *StageMetrics) RecordGenerated() {
 	atomic.AddUint64(&m.generatedItems, 1)
 }
 
-func (m *StageMetrics) RecordGeneratedBurst(items int) {
-	atomic.AddUint64(&m.generatedItems, uint64(items))
-}
-
 func (m *StageMetrics) RecordDropped() {
 	atomic.AddUint64(&m.droppedItems, 1)
-}
-
-func (m *StageMetrics) RecordDroppedBurst(items int) {
-	atomic.AddUint64(&m.droppedItems, uint64(items))
 }
 
 func (m *StageMetrics) RecordOutput() {

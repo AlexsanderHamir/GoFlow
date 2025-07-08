@@ -23,8 +23,7 @@ type Stage struct {
 	isFinal     bool
 	isGenerator bool
 
-	stop     func()
-	stopOnce sync.Once
+	stop func()
 
 	gm *tracker.GoroutineManager
 }
@@ -34,7 +33,6 @@ func (s *Stage) GetisGenerator() bool {
 	return s.isGenerator
 }
 
-// NewStage creates a new stage with the given configuration
 func NewStage(name string, config *StageConfig) *Stage {
 	if config == nil {
 		config = DefaultConfig()
@@ -65,19 +63,11 @@ func (s *Stage) Start(ctx context.Context, wg *sync.WaitGroup) error {
 func (s *Stage) generatorWorker(wg *sync.WaitGroup) {
 	defer s.stageTermination(wg)
 
-	burstCount := 0
-	lastBurstTime := time.Now()
-
 	for {
 		select {
 		case <-s.Config.ctx.Done():
 			return
 		default:
-			if s.shouldExecuteBurst(burstCount, lastBurstTime) {
-				s.executeBurst(&burstCount, &lastBurstTime)
-				continue
-			}
-
 			s.processRegularGeneration()
 		}
 	}
@@ -114,46 +104,6 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 			}
 		}
 	}
-}
-
-// processBurst handles sending a burst of items to the output channel
-func (s *Stage) processBurst(items []any) {
-	var processedItems int
-
-	defer func() {
-		if r := recover(); r != nil {
-			s.metrics.RecordDroppedBurst(len(items) - processedItems)
-		}
-	}()
-
-	for _, item := range items {
-		select {
-		case <-s.Config.ctx.Done():
-			s.metrics.RecordDroppedBurst(len(items) - processedItems)
-			return
-		case s.output <- item:
-			processedItems++
-			s.metrics.RecordOutput()
-		default:
-			if s.Config.DropOnBackpressure {
-				s.metrics.RecordDropped()
-			} else {
-				s.output <- item
-				processedItems++
-				s.metrics.RecordOutput()
-			}
-		}
-	}
-}
-
-// shouldExecuteBurst determines if it's time to process a burst based on configuration.
-func (s *Stage) shouldExecuteBurst(burstCount int, lastBurstTime time.Time) bool {
-	if s.Config.InputBurst == nil || s.Config.BurstCountTotal <= 0 {
-		return false
-	}
-
-	now := time.Now()
-	return burstCount < s.Config.BurstCountTotal && now.Sub(lastBurstTime) >= s.Config.BurstInterval
 }
 
 // processRegularGeneration handles the regular item generation flow
@@ -295,12 +245,4 @@ func (s *Stage) stageTermination(wg *sync.WaitGroup) {
 	}
 
 	wg.Done()
-}
-
-func (s *Stage) executeBurst(burstCount *int, lastBurstTime *time.Time) {
-	items := s.Config.InputBurst()
-	s.metrics.RecordGeneratedBurst(len(items))
-	s.processBurst(items)
-	*burstCount++
-	*lastBurstTime = time.Now()
 }

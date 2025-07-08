@@ -146,7 +146,6 @@ func (s *Simulator) WaitForStats() {
 func (s *Simulator) GetStages() []*Stage {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-
 	return s.stages
 }
 

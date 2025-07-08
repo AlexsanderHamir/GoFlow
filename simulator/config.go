@@ -12,14 +12,6 @@ type StageConfig struct {
 	// Custom item generator function
 	ItemGenerator func() any
 
-	// Handles load spikes and burst patterns
-	// Generates input bursts at intervals
-	InputBurst func() []any
-	// Total number of bursts to inject
-	BurstCountTotal int
-	// Interval between bursts
-	BurstInterval time.Duration
-
 	// Number of goroutines per stage
 	RoutineNum int
 	// Channel buffer size per stage
