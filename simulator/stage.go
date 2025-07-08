@@ -10,8 +10,8 @@ import (
 
 // Stage represents a processing stage in the pipeline
 type Stage struct {
-	Name string
-	Config  *StageConfig
+	Name   string
+	Config *StageConfig
 
 	input  chan any
 	output chan any
@@ -19,7 +19,9 @@ type Stage struct {
 
 	metrics *StageMetrics
 
-	isFinal           bool
+	isFinal     bool
+	isGenerator bool
+
 	maxGeneratedItems int
 	stop              func()
 	stopOnce          sync.Once
@@ -27,8 +29,8 @@ type Stage struct {
 	gm *tracker.GoroutineManager
 }
 
-func (s *Stage) GetConfig() *StageConfig {
-	return s.Config
+func (s *Stage) GetisGenerator() bool {
+	return s.isGenerator
 }
 
 // NewStage creates a new stage with the given configuration

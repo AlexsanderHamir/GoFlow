@@ -36,8 +36,6 @@ type StageConfig struct {
 	// Worker function that processes each item
 	WorkerFunc func(item any) (any, error)
 
-	// Whether the stage is a generator
-	isGenerator bool
 	// Context for cancellation and deadlines
 	ctx context.Context
 }
@@ -50,8 +48,4 @@ func DefaultConfig() *StageConfig {
 		RetryCount:         0,
 		DropOnBackpressure: false,
 	}
-}
-
-func (c *StageConfig) GetIsGenerator() bool {
-	return c.isGenerator
 }
