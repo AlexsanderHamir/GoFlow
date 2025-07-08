@@ -30,6 +30,7 @@ func Example() {
 	stage1 := simulator.NewStage("Generators", generatorConfig)
 
 	// Create configuration for other stages
+	// Look at the click at the StageConfig for more options!!!
 	globalConfig := &simulator.StageConfig{
 		RoutineNum: 100,
 		BufferSize: 5000, // output buffer size
