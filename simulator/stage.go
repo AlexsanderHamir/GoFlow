@@ -86,6 +86,8 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 		startTime := time.Now()
 		select {
 		case <-s.Config.ctx.Done():
+			// there may be items on the stage's input channel that we're leaving behind
+			// which may create some inconsistencies on the stats.
 			return
 		case item, ok := <-s.input:
 			s.gm.TrackSelectCase(s.Name, time.Since(startTime), id)

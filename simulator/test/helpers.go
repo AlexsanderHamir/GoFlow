@@ -23,8 +23,9 @@ func CreateConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig
 	}
 
 	globalConfig := &simulator.StageConfig{
-		RoutineNum: 100,
-		BufferSize: 100,
+		RoutineNum:         100,
+		BufferSize:         100,
+		DropOnBackpressure: true,
 		WorkerFunc: func(item any) (any, error) {
 			item = item.(int) + rand.Intn(100)
 			return item, nil
