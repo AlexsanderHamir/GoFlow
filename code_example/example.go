@@ -12,7 +12,6 @@ func Example() {
 	// Create simulator
 	sim := simulator.NewSimulator()
 	sim.Duration = 10 * time.Second
-	// sim.MaxGeneratedItems = 10000
 
 	// Create configuration for generator stage
 	generatorConfig := &simulator.StageConfig{

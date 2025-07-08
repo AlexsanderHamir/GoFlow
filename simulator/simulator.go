@@ -19,10 +19,6 @@ type Simulator struct {
 	// Duration specifies how long the simulation should run.
 	Duration time.Duration
 
-	// MaxGeneratedItems is the maximum number of items to generate before stopping.
-	// Cannot be set if duration is active.
-	MaxGeneratedItems int
-
 	// Stages contains all the processing stages in the pipeline, ordered
 	// from first (generator) to last (final stage).
 	stages []*Stage
@@ -103,9 +99,6 @@ func (s *Simulator) AddStage(stage *Stage) error {
 //
 // Returns:
 //   - error: nil if successful, or an error describing the failure
-//
-// Panics:
-//   - If both Duration and MaxGeneratedItems are set to positive values
 func (s *Simulator) Start() error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -119,12 +112,7 @@ func (s *Simulator) Start() error {
 	}
 
 	go func() {
-		if s.MaxGeneratedItems > 0 && s.Duration > 0 {
-			panic("either duration or max generated items must be set, not both")
-		}
-
-		durationActive := s.MaxGeneratedItems <= 0 && s.Duration > 0
-		if durationActive {
+		if s.Duration > 0 {
 			time.Sleep(s.Duration)
 			s.Stop()
 		}
@@ -213,7 +201,6 @@ func (s *Simulator) PrintStats() {
 // from it, allowing you to focus only on the desired stages.
 func (s *Simulator) initializeStages() error {
 	generator := s.stages[0]
-	generator.maxGeneratedItems = s.MaxGeneratedItems
 	generator.stop = s.Stop
 	generator.isGenerator = true
 

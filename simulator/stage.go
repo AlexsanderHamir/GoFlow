@@ -22,9 +22,8 @@ type Stage struct {
 	isFinal     bool
 	isGenerator bool
 
-	maxGeneratedItems int
-	stop              func()
-	stopOnce          sync.Once
+	stop     func()
+	stopOnce sync.Once
 
 	gm *tracker.GoroutineManager
 }
@@ -72,11 +71,6 @@ func (s *Stage) generatorWorker(wg *sync.WaitGroup) {
 		case <-s.Config.ctx.Done():
 			return
 		default:
-			if s.maxGeneratedItems > 0 && s.metrics.generatedItems >= uint64(s.maxGeneratedItems) {
-				s.StopOnce()
-				continue
-			}
-
 			if s.shouldExecuteBurst(burstCount, lastBurstTime) {
 				s.executeBurst(&burstCount, &lastBurstTime)
 				continue
