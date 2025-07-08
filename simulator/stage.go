@@ -2,7 +2,7 @@ package simulator
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"sync"
 	"time"
 
@@ -68,17 +68,19 @@ func (s *Stage) generatorWorker(wg *sync.WaitGroup) {
 		case <-s.Config.ctx.Done():
 			return
 		default:
-			s.processRegularGeneration()
+			s.handleGeneration()
 		}
 	}
 }
 
 // worker is the worker for normal stages
 func (s *Stage) worker(wg *sync.WaitGroup) {
-	defer s.stageTermination(wg)
-
 	id := s.gm.TrackGoroutineStart()
-	defer s.gm.TrackGoroutineEnd(id)
+
+	defer func() {
+		s.stageTermination(wg)
+		s.gm.TrackGoroutineEnd(id)
+	}()
 
 	for {
 		startTime := time.Now()
@@ -91,23 +93,24 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 				return
 			}
 
-			result, err := s.processWorkerItem(item)
+			result, err := s.processItem(item)
 			if err != nil {
 				s.metrics.RecordDropped()
-				continue
+				break
 			}
 
 			if !s.isFinal {
-				s.handleWorkerOutput(result)
-			} else {
-				s.metrics.RecordDropped()
+				s.sendOutput(result)
+				break
 			}
+
+			s.metrics.RecordDropped()
 		}
 	}
 }
 
 // processRegularGeneration handles the regular item generation flow
-func (s *Stage) processRegularGeneration() {
+func (s *Stage) handleGeneration() {
 	defer func() {
 		if r := recover(); r != nil {
 			s.metrics.RecordDropped()
@@ -124,34 +127,24 @@ func (s *Stage) processRegularGeneration() {
 
 	item := s.Config.ItemGenerator()
 	s.metrics.RecordGenerated()
+
 	select {
 	case <-s.Config.ctx.Done():
 		s.metrics.RecordDropped()
-		return
 	case s.output <- item:
 		s.metrics.RecordOutput()
 	default:
 		if s.Config.DropOnBackpressure {
 			s.metrics.RecordDropped()
 		} else {
-			s.output <- item
+			s.output <- item // blocks
 			s.metrics.RecordOutput()
 		}
 	}
 }
 
-// processWorkerItem handles the processing of a single item in the worker loop
-func (s *Stage) processWorkerItem(item any) (any, error) {
-	result, err := s.processItem(item)
-	if result != nil {
-		s.metrics.RecordProcessing()
-	}
-
-	return result, err
-}
-
 // handleWorkerOutput manages sending the processed item to the output channel with backpressure.
-func (s *Stage) handleWorkerOutput(result any) {
+func (s *Stage) sendOutput(result any) {
 	defer func() {
 		if r := recover(); r != nil {
 			s.metrics.RecordDropped()
@@ -175,12 +168,38 @@ func (s *Stage) handleWorkerOutput(result any) {
 }
 
 func (s *Stage) validateConfig() error {
-	if s.Config.WorkerFunc == nil && !s.isGenerator {
-		return fmt.Errorf("worker function not set")
+	cfg := s.Config
+
+	if !s.isGenerator && cfg.WorkerFunc == nil {
+		return errors.New("worker function must be set for non-generator stages")
 	}
 
-	if s.isGenerator && s.Config.ItemGenerator == nil {
-		return fmt.Errorf("generator function not set")
+	if s.isGenerator && cfg.ItemGenerator == nil {
+		return errors.New("item generator must be set for generator stages")
+	}
+
+	if cfg.RoutineNum <= 0 {
+		return errors.New("routine number must be greater than 0")
+	}
+
+	if cfg.BufferSize < 0 {
+		return errors.New("buffer size cannot be negative")
+	}
+
+	if s.isGenerator && cfg.InputRate < 0 {
+		return errors.New("input rate cannot be negative for generator stages")
+	}
+
+	if cfg.RetryCount < 0 {
+		return errors.New("retry count cannot be negative")
+	}
+
+	if cfg.ctx == nil {
+		return errors.New("context must not be nil")
+	}
+
+	if s.Name == "" {
+		return errors.New("stage name cannot be empty")
 	}
 
 	return nil
@@ -224,7 +243,7 @@ func (s *Stage) processItem(item any) (any, error) {
 		lastErr = err
 		attempt++
 
-		if attempt > s.Config.RetryCount {
+		if attempt == s.Config.RetryCount {
 			break
 		}
 	}
@@ -236,13 +255,14 @@ func (s *Stage) GetMetrics() *StageMetrics {
 	return s.metrics
 }
 
+// Only one worker will be able to close the channel and to
+// stop the metric, all other workers will just decrement the counter.
 func (s *Stage) stageTermination(wg *sync.WaitGroup) {
 	select {
 	case s.sem <- struct{}{}:
 		close(s.output)
 		s.metrics.Stop()
 	default:
+		wg.Done()
 	}
-
-	wg.Done()
 }
