@@ -6,7 +6,9 @@ import (
 )
 
 // StageStats represents the statistics for a single stage
-type StageStats struct { // CODE REVIEW
+// This is the public snapshot of the stats, which comes from
+// StageMetrics.
+type StageStats struct {
 	StageName      string
 	ProcessedItems uint64
 	OutputItems    uint64
@@ -55,6 +57,8 @@ func getFloatMetric(stats map[string]any, key string) float64 {
 	return 0.0
 }
 
+// Computes the difference between the current stage and the previous one, excluding
+// the first and the last stage.
 func computeDiffs(prev, curr *StageStats) (procDiffStr, thruDiffStr string) {
 	procDiffStr = "-"
 	thruDiffStr = "-"
