@@ -5,10 +5,7 @@ import (
 	"strings"
 )
 
-// StageStats represents the statistics for a single stage
-// This is the public snapshot of the stats, which comes from
-// StageMetrics.
-type StageStats struct {
+type stageStats struct {
 	StageName      string
 	ProcessedItems uint64
 	OutputItems    uint64
@@ -22,9 +19,9 @@ type StageStats struct {
 	IsFinal        bool
 }
 
-func collectStageStats(stage *Stage) StageStats {
+func collectStageStats(stage *Stage) stageStats {
 	stats := stage.GetMetrics().GetStats()
-	return StageStats{
+	return stageStats{
 		StageName:      stage.Name,
 		ProcessedItems: getIntMetric(stats, "processed_items"),
 		OutputItems:    getIntMetric(stats, "output_items"),
@@ -37,7 +34,6 @@ func collectStageStats(stage *Stage) StageStats {
 	}
 }
 
-// getIntMetric safely retrieves an integer metric, returning 0 if nil
 func getIntMetric(stats map[string]any, key string) uint64 {
 	if val, ok := stats[key]; ok && val != nil {
 		if intVal, ok := val.(uint64); ok {
@@ -47,7 +43,6 @@ func getIntMetric(stats map[string]any, key string) uint64 {
 	return 0
 }
 
-// getFloatMetric safely retrieves a float metric, returning 0.0 if nil
 func getFloatMetric(stats map[string]any, key string) float64 {
 	if val, ok := stats[key]; ok && val != nil {
 		if floatVal, ok := val.(float64); ok {
@@ -57,9 +52,7 @@ func getFloatMetric(stats map[string]any, key string) float64 {
 	return 0.0
 }
 
-// Computes the difference between the current stage and the previous one, excluding
-// the first and the last stage.
-func computeDiffs(prev, curr *StageStats) (procDiffStr, thruDiffStr string) {
+func computeDiffs(prev, curr *stageStats) (procDiffStr, thruDiffStr string) {
 	procDiffStr = "-"
 	thruDiffStr = "-"
 	if prev == nil {
@@ -90,7 +83,7 @@ func printHeader() {
 	fmt.Println(strings.Repeat("-", 114))
 }
 
-func printStageRow(stat *StageStats, procDiff, thruDiff string) {
+func printStageRow(stat *stageStats, procDiff, thruDiff string) {
 	fmt.Printf("%-20s %12d %12d %12.2f %12d %12.2f %12s %12s\n",
 		stat.StageName,
 		stat.ProcessedItems,

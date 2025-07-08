@@ -6,8 +6,7 @@ import (
 	"time"
 )
 
-// StageMetrics tracks performance metrics for a stage
-type StageMetrics struct {
+type stageMetrics struct {
 	mu             sync.RWMutex
 	processedItems uint64
 	droppedItems   uint64
@@ -17,41 +16,40 @@ type StageMetrics struct {
 	generatedItems uint64
 }
 
-func NewStageMetrics() *StageMetrics {
-	return &StageMetrics{
+func newStageMetrics() *stageMetrics {
+	return &stageMetrics{
 		startTime: time.Now(),
 	}
 }
 
-func (m *StageMetrics) RecordProcessed() {
+func (m *stageMetrics) recordProcessed() {
 	atomic.AddUint64(&m.processedItems, 1)
 }
 
-func (m *StageMetrics) RecordGenerated() {
+func (m *stageMetrics) recordGenerated() {
 	atomic.AddUint64(&m.generatedItems, 1)
 }
 
-func (m *StageMetrics) RecordDropped() {
+func (m *stageMetrics) recordDropped() {
 	atomic.AddUint64(&m.droppedItems, 1)
 }
 
-func (m *StageMetrics) RecordOutput() {
+func (m *stageMetrics) recordOutput() {
 	atomic.AddUint64(&m.outputItems, 1)
 }
 
-// Stop marks the end of metrics collection
-func (m *StageMetrics) Stop() {
+func (m *stageMetrics) stop() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.endTime = time.Now()
 }
 
 // GetStats returns a map of current metrics
-func (m *StageMetrics) GetStats() map[string]any {
+func (m *stageMetrics) GetStats() map[string]any {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	commonMap := m.GetCommons()
+	commonMap := m.getCommons()
 
 	isGenerator := atomic.LoadUint64(&m.generatedItems) > 0
 	if isGenerator {
@@ -62,15 +60,14 @@ func (m *StageMetrics) GetStats() map[string]any {
 	processed := atomic.LoadUint64(&m.processedItems)
 	noProcessingHappaned := processed == 0
 	if noProcessingHappaned {
-		return m.GetEmpty()
+		return m.getEmpty()
 	}
 
 	commonMap["processed_items"] = processed
 	return commonMap
 }
 
-// Returns an empty map indicating that no processing happened.
-func (m *StageMetrics) GetEmpty() map[string]any {
+func (m *stageMetrics) getEmpty() map[string]any {
 	return map[string]any{
 		"processed_items": 0,
 		"dropped_items":   0,
@@ -80,9 +77,7 @@ func (m *StageMetrics) GetEmpty() map[string]any {
 	}
 }
 
-// Returns a map with fields that the generators and workers
-// have in common.
-func (m *StageMetrics) GetCommons() map[string]any {
+func (m *stageMetrics) getCommons() map[string]any {
 	duration := m.endTime.Sub(m.startTime)
 	if m.endTime.IsZero() {
 		duration = time.Since(m.startTime)

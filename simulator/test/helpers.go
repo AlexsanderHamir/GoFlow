@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/GoFlow/simulator"
+	"github.com/stretchr/testify/assert"
 )
 
-func CreateConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig, *simulator.Simulator) {
+// CreateConfigsAndSimulator creates a basic config for testing
+func createConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig, *simulator.Simulator) {
 	sim := simulator.NewSimulator()
 	sim.Duration = 2 * time.Second
 
@@ -35,7 +37,8 @@ func CreateConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig
 	return generatorConfig, globalConfig, sim
 }
 
-func CreateStages(sim *simulator.Simulator, generatorConfig *simulator.StageConfig, globalConfig *simulator.StageConfig) {
+
+func createStages(t *testing.T, sim *simulator.Simulator, generatorConfig *simulator.StageConfig, globalConfig *simulator.StageConfig) {
 	stage1 := simulator.NewStage("Generator", generatorConfig)
 	stage2 := simulator.NewStage("Stage-1", globalConfig)
 	stage3 := simulator.NewStage("Stage-2", globalConfig)
@@ -46,25 +49,42 @@ func CreateStages(sim *simulator.Simulator, generatorConfig *simulator.StageConf
 	stage8 := simulator.NewStage("Stage-7", globalConfig)
 	stage9 := simulator.NewStage("Stage-8", globalConfig)
 
-	sim.AddStage(stage1)
-	sim.AddStage(stage2)
-	sim.AddStage(stage3)
-	sim.AddStage(stage4)
-	sim.AddStage(stage5)
-	sim.AddStage(stage6)
-	sim.AddStage(stage7)
-	sim.AddStage(stage8)
-	sim.AddStage(stage9)
+	err := sim.AddStage(stage1)
+	assert.NoError(t, err)
+
+	err = sim.AddStage(stage2)
+	assert.NoError(t, err)
+
+	err = sim.AddStage(stage3)
+	assert.NoError(t, err)
+
+	err = sim.AddStage(stage4)
+	assert.NoError(t, err)
+
+	err = sim.AddStage(stage5)
+	assert.NoError(t, err)
+
+	err = sim.AddStage(stage6)
+	assert.NoError(t, err)
+
+	err = sim.AddStage(stage7)
+	assert.NoError(t, err)
+
+	err = sim.AddStage(stage8)
+	assert.NoError(t, err)
+
+	err = sim.AddStage(stage9)
+	assert.NoError(t, err)
 }
 
-func CheckStageAccountingConsistency(simulator *simulator.Simulator, t *testing.T) {
+func checkStageAccountingConsistency(simulator *simulator.Simulator, t *testing.T) {
 	var lastStageOutput uint64
 	var lastStageName string
 
 	for _, stage := range simulator.GetStages() {
 		stats := stage.GetMetrics().GetStats()
 
-		if stage.GetisGenerator() {
+		if stage.GetIsGenerator() {
 			output := stats["output_items"].(uint64)
 			generated := stats["generated_items"].(uint64)
 			dropped := stats["dropped_items"].(uint64)
@@ -74,7 +94,7 @@ func CheckStageAccountingConsistency(simulator *simulator.Simulator, t *testing.
 			totalProcessed := output + dropped
 
 			if totalProcessed != generated {
-				t.Fatalf("Generator Inconsistency: output(%d) + dropped(%d) = %d, different than generated: %d \n error priority: %s", output, dropped, totalProcessed, generated, PriorityMedium)
+				t.Fatalf("Generator Inconsistency: output(%d) + dropped(%d) = %d, different than generated: %d \n error priority: %s", output, dropped, totalProcessed, generated, priorityMedium)
 			}
 			continue
 		}
@@ -85,11 +105,11 @@ func CheckStageAccountingConsistency(simulator *simulator.Simulator, t *testing.
 		currentStageTotalReceived := currentOutput + currentDropped
 
 		if currentProcessed > currentStageTotalReceived {
-			t.Fatalf("processed_items(%d), can't be bigger than output + dropped(%d) \n error priority: %s", currentProcessed, currentStageTotalReceived, PriorityHigh)
+			t.Fatalf("processed_items(%d), can't be bigger than output + dropped(%d) \n error priority: %s", currentProcessed, currentStageTotalReceived, priorityHigh)
 		}
 
 		if lastStageOutput != currentStageTotalReceived {
-			t.Fatalf("%s output %d does not match current %s total %d \n missing count: %d \n error priority: %s", lastStageName, lastStageOutput, stage.Name, currentStageTotalReceived, lastStageOutput-currentStageTotalReceived, PriorityLow)
+			t.Fatalf("%s output %d does not match current %s total %d \n missing count: %d \n error priority: %s", lastStageName, lastStageOutput, stage.Name, currentStageTotalReceived, lastStageOutput-currentStageTotalReceived, priorityLow)
 		}
 
 		lastStageOutput = currentOutput

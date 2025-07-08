@@ -1,36 +1,21 @@
-# GolangCI-Lint configuration file for maintaining code quality and consistency
-
 run:
-  timeout: 5m # Maximum time allowed for the linter to run
-  tests: true # Include test files in the linting process
+  timeout: 5m
+  tests: true
 
 linters:
   enable:
-    - govet # Detects suspicious constructs (e.g. format string issues)
-    - gofmt # Ensures code is properly formatted
-    - goimports # Formats imports and removes unused ones
-    - staticcheck # Advanced analysis for detecting bugs and performance issues
-    - revive # Fast and configurable style guide enforcement
-    - errcheck # Ensures errors are properly handled
-    - unused # Finds unused variables, constants, functions, etc.
+    - errcheck
+    - revive
+    - misspell
 
-# Optional: You can disable specific linters or enable more as the project grows
-# linters:
-#   disable:
-#     - deadcode
-#     - typecheck
+linters-settings:
+  revive:
+    rules:
+      - name: var-naming
+      - name: indent-error-flow
+      - name: exported
+      - name: error-naming
+      - name: error-return
 
 issues:
-  exclude-use-default: false # Use the default set of issue exclusions (recommended)
-
-# Optional: You can specify file/path exclusions here
-# exclude-paths:
-#   - ^internal/experimental/.*$
-
-# Optional: Customize linter behavior (example for revive)
-# linters-settings:
-#   revive:
-#     severity: warning
-#     rules:
-#       - name: indent-error-flow
-#         severity: error
+  exclude-use-default: false

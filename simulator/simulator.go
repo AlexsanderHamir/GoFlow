@@ -12,34 +12,17 @@ import (
 
 // Simulator represents a concurrent pipeline simulator that orchestrates
 // multiple processing stages in a data flow pipeline.
-//
-// The simulator manages the lifecycle of all stages, coordinates data flow
-// between them, and collects comprehensive performance metrics. It supports
-// both time-based and item-count-based termination conditions.
 type Simulator struct {
-	// Duration specifies how long the simulation should run.
 	Duration time.Duration
-
-	// Stages contains all the processing stages in the pipeline, ordered
-	// from first (generator) to last (final stage).
-	stages []*Stage
-
-	// Mu protects access to the Stages slice and other shared state
-	mu sync.RWMutex
-
-	// Ctx provides cancellation context for all stages
-	ctx context.Context
-
-	// Cancel function to stop all stages gracefully
-	cancel context.CancelFunc
-
-	// Quit channel is closed when the simulation completes
-	quit chan struct{}
-
-	// Wg tracks all running goroutines for proper cleanup
-	wg sync.WaitGroup
+	stages   []*Stage
+	mu       sync.RWMutex
+	ctx      context.Context
+	cancel   context.CancelFunc
+	quit     chan struct{}
+	wg       sync.WaitGroup
 }
 
+// NewSimulator creates a new simulator for a specific pipeline.
 func NewSimulator() *Simulator {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Simulator{
@@ -51,20 +34,11 @@ func NewSimulator() *Simulator {
 
 // AddStage adds a new stage to the pipeline with validation.
 //
-// The stage is added to the end of the pipeline. The first stage added
-// should be a generator, the last stage should be the dummy, while subsequent stages
-// should be processors.
-//
-// Args:
-//   - stage: The stage to add to the pipeline
-//
-// Returns:
-//   - error: nil if successful, or an error describing the validation failure
-//
 // Validation rules:
 //   - Stage cannot be nil
 //   - Stage name cannot be empty
 //   - Stage name must be unique within the pipeline
+//   - Stage config cannot be nil
 func (s *Simulator) AddStage(stage *Stage) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -93,22 +67,15 @@ func (s *Simulator) AddStage(stage *Stage) error {
 
 // Start begins the simulation and blocks until completion.
 //
-// This method initializes all stages, starts their goroutines, and waits
-// for the simulation to complete based on the configured termination
-// condition (Duration or MaxGeneratedItems).
-//
-// The simulation will automatically stop when:
-//   - The configured Duration has elapsed (if Duration > 0)
-//   - The configured MaxGeneratedItems have been generated (if MaxGeneratedItems > 0)
-//   - Stop() is called explicitly
-//
-// Returns:
-//   - error: nil if successful, or an error describing the failure
+// Validation rules:
+//   - At least 3 stages if you want to collect stats
+//   - Only one stage will result in creating a generator and nothing else.
+//   - Only two stages will result in having one generator and one dummy.
 func (s *Simulator) Start(printStats bool) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if len(s.stages) == 0 {
+	if len(s.stages) < 3 {
 		return fmt.Errorf("no stages to run")
 	}
 
@@ -119,75 +86,60 @@ func (s *Simulator) Start(printStats bool) error {
 	go func() {
 		if s.Duration > 0 {
 			time.Sleep(s.Duration)
-			s.Stop()
+			s.stop()
 		}
 
 		s.wg.Wait()
 		close(s.quit)
 	}()
 
-	s.WaitForStats(printStats)
+	s.waitForStats(printStats)
 
 	return nil
 }
 
-// Stop terminates the simulation by canceling the context.
-func (s *Simulator) Stop() {
-	s.cancel()
-}
-
-// Done returns a channel that is closed when the simulation completes.
-func (s *Simulator) Done() <-chan struct{} {
-	return s.quit
-}
-
-// WaitForStats blocks until the simulation completes and then prints statistics.
-func (s *Simulator) WaitForStats(printStats bool) {
-	<-s.Done()
-
-	if printStats {
-		s.PrintStats()
-	}
-}
-
 // GetStages returns a copy of all stages in the pipeline.
+// used by test package
 func (s *Simulator) GetStages() []*Stage {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.stages
 }
 
-type StateEntry struct {
+func (s *Simulator) stop() {
+	s.cancel()
+}
+
+func (s *Simulator) done() <-chan struct{} {
+	return s.quit
+}
+
+func (s *Simulator) waitForStats(printStats bool) {
+	<-s.done()
+
+	if printStats {
+		s.printStats()
+	}
+}
+
+type stateEntry struct {
 	Stats map[tracker.GoroutineId]*tracker.GoroutineStats
 	Label string
 }
 
-// PrintStats displays statistics for all stages in the pipeline.
-//
-// The statistics include:
-//   - Processed: Items processed but not yet sent
-//   - Output: Items processed and successfully sent to next stage
-//   - Throughput (items per second)
-//   - Dropped items count
-//   - Drop rate percentage
-//   - Generated items (for generator stages)
-//   - Percentage changes between stages
-//   - Histogram accounting for the total blocked time per goroutine
-//
-// The output is formatted as a table for easy reading and analysis.
-func (s *Simulator) PrintStats() {
+func (s *Simulator) printStats() {
 	stages := s.GetStages()
 	printHeader()
 
-	var prev *StageStats
-	allStages := []*StateEntry{}
+	var prev *stageStats
+	allStages := []*stateEntry{}
 
 	for _, stage := range stages {
 		current := collectStageStats(stage)
 		procDiff, thruDiff := computeDiffs(prev, &current)
 		printStageRow(&current, procDiff, thruDiff)
 		prev = &current
-		entry := &StateEntry{
+		entry := &stateEntry{
 			Stats: stage.gm.GetAllStats(),
 			Label: stage.Name,
 		}
@@ -201,14 +153,9 @@ func (s *Simulator) PrintStats() {
 	}
 }
 
-// Responsible for initializing all stages,
-// this method will consider the first stage the generator
-// and the last one the dummy stage, both serve an important role,
-// the generator feeds data into the pipeline and the dummy removes
-// from it, allowing you to focus only on the desired stages.
 func (s *Simulator) initializeStages() error {
 	generator := s.stages[0]
-	generator.stop = s.Stop
+	generator.stop = s.stop
 	generator.isGenerator = true
 
 	lastStage := s.stages[len(s.stages)-1]

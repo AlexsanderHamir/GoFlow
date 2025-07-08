@@ -8,6 +8,7 @@ import (
 	"github.com/AlexsanderHamir/GoFlow/simulator"
 )
 
+// Example implements a complete example of how to use the library.
 func Example() {
 	// Create simulator
 	sim := simulator.NewSimulator()
@@ -91,15 +92,50 @@ func Example() {
 		return item, nil
 	}
 
-	sim.AddStage(stage1)
-	sim.AddStage(stage2)
-	sim.AddStage(stage3)
-	sim.AddStage(stage4)
-	sim.AddStage(stage5)
-	sim.AddStage(stage6)
-	sim.AddStage(stage7)
-	sim.AddStage(stage8)
-	sim.AddStage(stage9)
+	err := sim.AddStage(stage1)
+	if err != nil {
+		panic(err)
+	}
+
+	err = sim.AddStage(stage2)
+	if err != nil {
+		panic(err)
+	}
+
+	err = sim.AddStage(stage3)
+	if err != nil {
+		panic(err)
+	}
+
+	err = sim.AddStage(stage4)
+	if err != nil {
+		panic(err)
+	}
+
+	err = sim.AddStage(stage5)
+	if err != nil {
+		panic(err)
+	}
+
+	err = sim.AddStage(stage6)
+	if err != nil {
+		panic(err)
+	}
+
+	err = sim.AddStage(stage7)
+	if err != nil {
+		panic(err)
+	}
+
+	err = sim.AddStage(stage8)
+	if err != nil {
+		panic(err)
+	}
+
+	err = sim.AddStage(stage9)
+	if err != nil {
+		panic(err)
+	}
 
 	printStats := true
 	if err := sim.Start(printStats); err != nil {

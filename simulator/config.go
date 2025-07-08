@@ -40,6 +40,7 @@ type StageConfig struct {
 }
 
 // DefaultConfig returns a new SimulationConfig with sensible defaults
+// Used by test package
 func DefaultConfig() *StageConfig {
 	return &StageConfig{
 		RoutineNum:         1,

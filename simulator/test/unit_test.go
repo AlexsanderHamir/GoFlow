@@ -33,5 +33,5 @@ func TestConfigValidation(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = sim.Start(false)
-	assert.Error(t, err, StartSimulationBaseError+MissingItemGenerator)
+	assert.Error(t, err, startSimulationBaseError+missingItemGenerator)
 }

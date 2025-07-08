@@ -1,14 +1,20 @@
 package test
 
-type ErrorPriority string
+// ErrorPriority represents the priority of the possible errors a test may find.
+type errorPriority string
+
+// Available priorities
 const (
-	PriorityLow    ErrorPriority = "don't bother"
-	PriorityMedium ErrorPriority = "somebody should fix this"
-	PriorityHigh   ErrorPriority = "fix this immediately"
+	priorityLow    errorPriority = "don't bother"
+	priorityMedium errorPriority = "somebody should fix this"
+	priorityHigh   errorPriority = "fix this immediately"
 )
 
-type ErrorMessages string
+// ErrorMessages standardized
+type errorMessages string
+
+// Current cataloged
 const (
-	StartSimulationBaseError = "failed to initialize stages: "
-	MissingItemGenerator     = "ItemGenerator must be set for generator stage"
+	startSimulationBaseError errorMessages = "failed to initialize stages: "
+	missingItemGenerator     errorMessages = "ItemGenerator must be set for generator stage"
 )

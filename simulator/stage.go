@@ -17,7 +17,7 @@ type Stage struct {
 	output chan any
 	sem    chan struct{}
 
-	metrics *StageMetrics
+	metrics *stageMetrics
 
 	isFinal     bool
 	isGenerator bool
@@ -27,11 +27,12 @@ type Stage struct {
 	gm *tracker.GoroutineManager
 }
 
-// getter
-func (s *Stage) GetisGenerator() bool {
+// GetIsGenerator is a getter.
+func (s *Stage) GetIsGenerator() bool {
 	return s.isGenerator
 }
 
+// NewStage creates a new stage with the provided config or creates a default one.
 func NewStage(name string, config *StageConfig) *Stage {
 	if config == nil {
 		config = DefaultConfig()
@@ -42,7 +43,7 @@ func NewStage(name string, config *StageConfig) *Stage {
 		output:  make(chan any, config.BufferSize),
 		Config:  config,
 		sem:     make(chan struct{}, 1),
-		metrics: NewStageMetrics(),
+		metrics: newStageMetrics(),
 		gm:      tracker.NewGoroutineManager(),
 	}
 }
@@ -83,17 +84,17 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 
 			result, err := s.processItem(item)
 			if err != nil {
-				s.metrics.RecordDropped()
+				s.metrics.recordDropped()
 				break
 			}
-			s.metrics.RecordProcessed()
+			s.metrics.recordProcessed()
 
 			if !s.isFinal {
 				s.sendOutput(result)
 				break
 			}
 
-			s.metrics.RecordDropped()
+			s.metrics.recordDropped()
 		}
 	}
 }
@@ -102,7 +103,7 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 func (s *Stage) handleGeneration() {
 	defer func() {
 		if r := recover(); r != nil {
-			s.metrics.RecordDropped()
+			s.metrics.recordDropped()
 		}
 	}()
 
@@ -115,19 +116,19 @@ func (s *Stage) handleGeneration() {
 	}
 
 	item := s.Config.ItemGenerator()
-	s.metrics.RecordGenerated()
+	s.metrics.recordGenerated()
 
 	select {
 	case <-s.Config.ctx.Done():
-		s.metrics.RecordDropped()
+		s.metrics.recordDropped()
 	case s.output <- item: // blocks
-		s.metrics.RecordOutput()
+		s.metrics.recordOutput()
 	default:
 		if s.Config.DropOnBackpressure {
-			s.metrics.RecordDropped()
+			s.metrics.recordDropped()
 		} else {
 			s.output <- item
-			s.metrics.RecordOutput()
+			s.metrics.recordOutput()
 		}
 	}
 }
@@ -136,22 +137,22 @@ func (s *Stage) handleGeneration() {
 func (s *Stage) sendOutput(result any) {
 	defer func() {
 		if r := recover(); r != nil {
-			s.metrics.RecordDropped()
+			s.metrics.recordDropped()
 		}
 	}()
 
 	select {
 	case <-s.Config.ctx.Done():
-		s.metrics.RecordDropped()
+		s.metrics.recordDropped()
 		return
 	case s.output <- result:
-		s.metrics.RecordOutput()
+		s.metrics.recordOutput()
 	default:
 		if s.Config.DropOnBackpressure {
-			s.metrics.RecordDropped()
+			s.metrics.recordDropped()
 		} else {
 			s.output <- result // blocks
-			s.metrics.RecordOutput()
+			s.metrics.recordOutput()
 		}
 	}
 }
@@ -240,7 +241,9 @@ func (s *Stage) processItem(item any) (any, error) {
 	return nil, lastErr
 }
 
-func (s *Stage) GetMetrics() *StageMetrics {
+// GetMetrics is a getting.
+// Used by the test package
+func (s *Stage) GetMetrics() *stageMetrics {
 	return s.metrics
 }
 
@@ -253,7 +256,7 @@ func (s *Stage) stageTermination(wg *sync.WaitGroup) {
 	select {
 	case s.sem <- struct{}{}:
 		close(s.output)
-		s.metrics.Stop()
+		s.metrics.stop()
 	default:
 	}
 	wg.Done()
