@@ -1,7 +1,6 @@
 package simulator
 
 import (
-	"context"
 	"errors"
 	"sync"
 	"time"
@@ -46,17 +45,6 @@ func NewStage(name string, config *StageConfig) *Stage {
 		metrics: NewStageMetrics(),
 		gm:      tracker.NewGoroutineManager(),
 	}
-}
-
-// Start initializes the workers and generators for all stages
-func (s *Stage) Start(ctx context.Context, wg *sync.WaitGroup) error {
-	if err := s.validateConfig(); err != nil {
-		return err
-	}
-
-	s.initializeStages(wg)
-
-	return nil
 }
 
 // generatorWorker is the worker for the generators
@@ -132,13 +120,13 @@ func (s *Stage) handleGeneration() {
 	select {
 	case <-s.Config.ctx.Done():
 		s.metrics.RecordDropped()
-	case s.output <- item:
+	case s.output <- item: // blocks
 		s.metrics.RecordOutput()
 	default:
 		if s.Config.DropOnBackpressure {
 			s.metrics.RecordDropped()
 		} else {
-			s.output <- item // blocks
+			s.output <- item
 			s.metrics.RecordOutput()
 		}
 	}
@@ -176,7 +164,7 @@ func (s *Stage) validateConfig() error {
 	}
 
 	if s.isGenerator && cfg.ItemGenerator == nil {
-		return errors.New("item generator must be set for generator stages")
+		return errors.New("ItemGenerator must be set for generator stage")
 	}
 
 	if cfg.RoutineNum <= 0 {
@@ -206,7 +194,7 @@ func (s *Stage) validateConfig() error {
 	return nil
 }
 
-func (s *Stage) initializeStages(wg *sync.WaitGroup) {
+func (s *Stage) initializeStage(wg *sync.WaitGroup) {
 	if s.isGenerator {
 		s.initializeGenerators(wg)
 	} else {
@@ -259,11 +247,14 @@ func (s *Stage) GetMetrics() *StageMetrics {
 // Only one worker will be able to close the channel and to
 // stop the metric, all other workers will just decrement the counter.
 func (s *Stage) stageTermination(wg *sync.WaitGroup) {
+	// Instead of calling wg.Done() inside case and default, it was best
+	// to do it outside the select.
+
 	select {
 	case s.sem <- struct{}{}:
 		close(s.output)
 		s.metrics.Stop()
 	default:
-		wg.Done()
 	}
+	wg.Done()
 }

@@ -11,7 +11,7 @@ import (
 
 func CreateConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig, *simulator.Simulator) {
 	sim := simulator.NewSimulator()
-	sim.Duration = 10 * time.Second
+	sim.Duration = 2 * time.Second
 
 	generatorConfig := &simulator.StageConfig{
 		InputRate:  100 * time.Millisecond,
@@ -23,8 +23,9 @@ func CreateConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig
 	}
 
 	globalConfig := &simulator.StageConfig{
-		RoutineNum: 100,
-		BufferSize: 100,
+		RoutineNum:         100,
+		BufferSize:         100,
+		DropOnBackpressure: true,
 		WorkerFunc: func(item any) (any, error) {
 			item = item.(int) + rand.Intn(100)
 			return item, nil
@@ -65,17 +66,30 @@ func CheckStageAccountingConsistency(simulator *simulator.Simulator, t *testing.
 
 		if stage.GetisGenerator() {
 			output := stats["output_items"].(uint64)
+			generated := stats["generated_items"].(uint64)
+			dropped := stats["dropped_items"].(uint64)
 			lastStageOutput = output
 			lastStageName = stage.Name
+
+			totalProcessed := output + dropped
+
+			if totalProcessed != generated {
+				t.Fatalf("Generator Inconsistency: output(%d) + dropped(%d) = %d, different than generated: %d \n error priority: %s", output, dropped, totalProcessed, generated, PriorityMedium)
+			}
 			continue
 		}
 
+		currentProcessed := stats["processed_items"].(uint64)
 		currentOutput := stats["output_items"].(uint64)
 		currentDropped := stats["dropped_items"].(uint64)
+		currentStageTotalReceived := currentOutput + currentDropped
 
-		total := currentOutput + currentDropped
-		if lastStageOutput != total {
-			t.Fatalf("%s last output %d does not match current stage %s total %d", lastStageName, lastStageOutput, stage.Name, total)
+		if currentProcessed > currentStageTotalReceived {
+			t.Fatalf("processed_items(%d), can't be bigger than output + dropped(%d) \n error priority: %s", currentProcessed, currentStageTotalReceived, PriorityHigh)
+		}
+
+		if lastStageOutput != currentStageTotalReceived {
+			t.Fatalf("%s output %d does not match current %s total %d \n missing count: %d \n error priority: %s", lastStageName, lastStageOutput, stage.Name, currentStageTotalReceived, lastStageOutput-currentStageTotalReceived, PriorityLow)
 		}
 
 		lastStageOutput = currentOutput

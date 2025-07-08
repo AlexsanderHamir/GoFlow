@@ -7,16 +7,16 @@ import (
 )
 
 const (
-	SimulationIterations = 1
+	SimulationIterations = 5
 )
 
-func TestSimulatorGeneratedStatsConsistency(t *testing.T) {
+func TestStatsConsistency(t *testing.T) {
 	for i := range SimulationIterations {
 		t.Run(fmt.Sprintf("Iteration_%d_Regular", i+1), func(t *testing.T) {
 			generatorConfig, globalConfig, simulator := CreateConfigsAndSimulator()
 			CreateStages(simulator, generatorConfig, globalConfig)
 
-			if err := simulator.Start(); err != nil {
+			if err := simulator.Start(false); err != nil {
 				log.Fatalf("Failed to start simulator in iteration %d: %v", i+1, err)
 			}
 
