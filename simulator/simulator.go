@@ -99,7 +99,7 @@ func (s *Simulator) AddStage(stage *Stage) error {
 //
 // Returns:
 //   - error: nil if successful, or an error describing the failure
-func (s *Simulator) Start() error {
+func (s *Simulator) Start(printStats bool) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -121,7 +121,7 @@ func (s *Simulator) Start() error {
 		close(s.quit)
 	}()
 
-	s.WaitForStats()
+	s.WaitForStats(printStats)
 
 	return nil
 }
@@ -137,9 +137,12 @@ func (s *Simulator) Done() <-chan struct{} {
 }
 
 // WaitForStats blocks until the simulation completes and then prints statistics.
-func (s *Simulator) WaitForStats() {
+func (s *Simulator) WaitForStats(printStats bool) {
 	<-s.Done()
-	s.PrintStats()
+
+	if printStats {
+		s.PrintStats()
+	}
 }
 
 // GetStages returns a copy of all stages in the pipeline.

@@ -11,7 +11,7 @@ import (
 
 func CreateConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig, *simulator.Simulator) {
 	sim := simulator.NewSimulator()
-	sim.Duration = 10 * time.Second
+	sim.Duration = 3 * time.Second
 
 	generatorConfig := &simulator.StageConfig{
 		InputRate:  100 * time.Millisecond,

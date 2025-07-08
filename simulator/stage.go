@@ -259,11 +259,14 @@ func (s *Stage) GetMetrics() *StageMetrics {
 // Only one worker will be able to close the channel and to
 // stop the metric, all other workers will just decrement the counter.
 func (s *Stage) stageTermination(wg *sync.WaitGroup) {
+	// Instead of calling wg.Done() inside case and default, it was best
+	// to do it outside the select.
+
 	select {
 	case s.sem <- struct{}{}:
 		close(s.output)
 		s.metrics.Stop()
 	default:
-		wg.Done()
 	}
+	wg.Done()
 }

@@ -101,7 +101,8 @@ func Example() {
 	sim.AddStage(stage8)
 	sim.AddStage(stage9)
 
-	if err := sim.Start(); err != nil {
+	printStats := true
+	if err := sim.Start(printStats); err != nil {
 		log.Fatalf("Failed to start simulator: %v", err)
 	}
 }

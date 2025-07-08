@@ -3,7 +3,7 @@
 - [x] Codebase is well-structured with clear module boundaries
   - [x] codebase structure
   - [x] Library exposition
-- [ ] Code/design reviews (PRs reviewed before merge)
+- [x] Code/design reviews (PRs reviewed before merge)
 - [ ] Good test coverage (unit, integration, fuzz)
 - [ ] CI pipeline for running tests (e.g. GitHub Actions)
 - [ ] Benchmarks or performance tests where applicable
