@@ -99,7 +99,7 @@ func (s *Simulator) Start(printStats bool) error {
 }
 
 // GetStages returns a copy of all stages in the pipeline.
-// used by test package
+// getter used by test package
 func (s *Simulator) GetStages() []*Stage {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

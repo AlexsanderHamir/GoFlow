@@ -89,9 +89,9 @@ cd GoFlow
 ### Development Guidelines
 
 - Write tests for new functionality
-- Follow Go code style guidelines
 - Update documentation for user-facing changes
 - Ensure all medium / high priority tests pass before submitting PRs
+- Ensure there are no linter errors
 
 ## Why GoFlow Was Created?
 
