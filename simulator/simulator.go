@@ -12,7 +12,7 @@ import (
 	"github.com/AlexsanderHamir/IdleSpy/tracker"
 )
 
-const GRAPH_FILE_NAME = "pipeline.dot"
+const graphFileName = "pipeline.dot"
 
 // DataPresentationChoices are the current choices that the library offers for its output.
 type DataPresentationChoices int
@@ -20,8 +20,10 @@ type DataPresentationChoices int
 const (
 	// DotFiles outputs DOT files for the entire pipeline, including a blocked time histogram (in DOT format) for each stage's goroutines.
 	DotFiles DataPresentationChoices = iota
+	// PrintToConsole will print the whole data to the console.
 	PrintToConsole
-	Nothing // Test purposes, removes the log.
+	// Nothing is for test purposes, removes the log.
+	Nothing
 )
 
 // Simulator represents a concurrent pipeline simulator that orchestrates
@@ -135,7 +137,7 @@ func (s *Simulator) waitForStats(choice DataPresentationChoices) {
 
 	switch choice {
 	case DotFiles:
-		err := s.WritePipelineDot(GRAPH_FILE_NAME)
+		err := s.WritePipelineDot(graphFileName)
 		if err != nil {
 			panic(err)
 		}
