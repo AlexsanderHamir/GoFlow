@@ -19,7 +19,7 @@
 - [Installation](#installation)
 - [Usage Example](#usage-example)
 - [Stats Explanation](#stats-explanation)
-- [Simulation Output](#simulation-output)
+- [Output Options](#output-options)
 - [Contributions](#contributions)
 - [Why GoFlow Was Created?](#why-goflow-was-created)
 
@@ -55,13 +55,35 @@ For a detailed example, see [example.go](code_example/example.go).
 - **Δ%**: Percentage difference in comparison with the stage before the current one.
 - **Goroutines**: The total amount of time the spent blocked per goroutine, represented by a histogram.
 
-## Simulation Output
+## Output Options
 
-The stats will be printed to the terminal, if you want to save to a file you can do the following:
+The library supports multiple output formats controlled via `DataPresentationChoices`. Below are the available modes:
+
+### 1. **PrintToConsole**
+
+Statistics will be printed directly to the terminal in a human-readable format.
+
+To save the output to a file, you can redirect it using standard shell syntax:
 
 ```bash
 go run main.go > output.txt
 ```
+
+### 2. **DotFiles**
+
+When this mode is selected, the library will generate Graphviz DOT files representing the pipeline and its runtime behavior:
+
+1. **Pipeline Overview**
+   A single `.dot` file showing the full pipeline layout, including stage names, configuration, and performance stats.
+
+2. **Per-Stage Histograms**
+   One `.dot` file per stage visualizing the **goroutine blocked time histogram**, which helps identify stages experiencing contention or delay.
+
+> These `.dot` files can be rendered with tools like Graphviz to generate visual diagrams:
+>
+> ```bash
+> dot -Tsvg pipeline.dot -o pipeline.svg
+> ```
 
 ## Contributions
 

@@ -18,6 +18,7 @@ const GRAPH_FILE_NAME = "pipeline.dot"
 type DataPresentationChoices int
 
 const (
+	// DotFiles outputs DOT files for the entire pipeline, including a blocked time histogram (in DOT format) for each stage's goroutines.
 	DotFiles DataPresentationChoices = iota
 	PrintToConsole
 	Nothing // Test purposes
