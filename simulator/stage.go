@@ -83,15 +83,14 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 				return
 			}
 
-			result, err := s.processItem(item)
-			if err != nil {
-				s.metrics.recordDropped()
-				break
-			}
-			s.metrics.recordProcessed()
-
-			// why is the final stage processing the items ?
 			if !s.isFinal {
+				result, err := s.processItem(item)
+				if err != nil {
+					s.metrics.recordDropped()
+					break
+				}
+				s.metrics.recordProcessed()
+
 				s.sendOutput(result)
 				break
 			}
@@ -162,7 +161,7 @@ func (s *Stage) sendOutput(result any) {
 func (s *Stage) validateConfig() error {
 	cfg := s.Config
 
-	if !s.isGenerator && cfg.WorkerFunc == nil {
+	if (!s.isGenerator && !s.isFinal) && cfg.WorkerFunc == nil {
 		return errors.New("worker function must be set for non-generator stages")
 	}
 

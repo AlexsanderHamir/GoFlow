@@ -23,24 +23,15 @@ func collectStageStats(stage *Stage) stageStats {
 	stats := stage.GetMetrics().GetStats()
 	return stageStats{
 		StageName:      stage.Name,
-		ProcessedItems: getIntMetric(stats, "processed_items"),
-		OutputItems:    getIntMetric(stats, "output_items"),
-		Throughput:     getFloatMetric(stats, "throughput"),
-		DroppedItems:   getIntMetric(stats, "dropped_items"),
+		ProcessedItems: stage.metrics.generatedItems,
+		OutputItems:    stage.metrics.outputItems,
+		Throughput:     float64(stage.metrics.outputItems),
+		DroppedItems:   stage.metrics.droppedItems,
 		DropRate:       getFloatMetric(stats, "drop_rate") * 100,
-		GeneratedItems: getIntMetric(stats, "generated_items"),
+		GeneratedItems: stage.metrics.generatedItems,
 		isGenerator:    stage.isGenerator,
 		IsFinal:        stage.isFinal,
 	}
-}
-
-func getIntMetric(stats map[string]any, key string) uint64 {
-	if val, ok := stats[key]; ok && val != nil {
-		if intVal, ok := val.(uint64); ok {
-			return intVal
-		}
-	}
-	return 0
 }
 
 func getFloatMetric(stats map[string]any, key string) float64 {

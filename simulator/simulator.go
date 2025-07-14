@@ -115,7 +115,7 @@ func (s *Simulator) Start(choice DataPresentationChoices) error {
 }
 
 // GetStages returns a copy of all stages in the pipeline.
-// getter used by test package
+// Getter used by test package
 func (s *Simulator) GetStages() []*Stage {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
