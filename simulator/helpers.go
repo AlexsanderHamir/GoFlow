@@ -23,26 +23,18 @@ func collectStageStats(stage *Stage) stageStats {
 	stats := stage.GetMetrics().GetStats()
 	return stageStats{
 		StageName:      stage.Name,
-		ProcessedItems: stage.metrics.generatedItems,
+		ProcessedItems: stage.metrics.processedItems,
 		OutputItems:    stage.metrics.outputItems,
-		Throughput:     float64(stage.metrics.outputItems),
+		Throughput:     stats["throughput"].(float64),
 		DroppedItems:   stage.metrics.droppedItems,
-		DropRate:       getFloatMetric(stats, "drop_rate") * 100,
+		DropRate:       stats["drop_rate"].(float64),
 		GeneratedItems: stage.metrics.generatedItems,
 		isGenerator:    stage.isGenerator,
 		IsFinal:        stage.isFinal,
 	}
 }
 
-func getFloatMetric(stats map[string]any, key string) float64 {
-	if val, ok := stats[key]; ok && val != nil {
-		if floatVal, ok := val.(float64); ok {
-			return floatVal
-		}
-	}
-	return 0.0
-}
-
+// computeDiffs calculates the different between one stage and the other.
 func computeDiffs(prev, curr *stageStats) (procDiffStr, thruDiffStr string) {
 	procDiffStr = ""
 	thruDiffStr = ""

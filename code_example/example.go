@@ -87,12 +87,8 @@ func Example() {
 
 	// The last stage will be considered the dummy stage, its stats
 	// won't be accounted for, its only job is to discard the items.
+	// No worker function is needed.
 	stage9 := simulator.NewStage("DummyStages", globalConfig)
-	stage9.Config.WorkerFunc = func(item any) (any, error) {
-		time.Sleep(350 * time.Millisecond)
-		item = item.(int) + rand.Intn(100)
-		return item, nil
-	}
 
 	err := sim.AddStage(stage1)
 	if err != nil {
