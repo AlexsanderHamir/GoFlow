@@ -4,11 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/AlexsanderHamir/IdleSpy/tracker"
 )
+
+const GRAPH_FILE_NAME = "pipeline.dot"
 
 // Simulator represents a concurrent pipeline simulator that orchestrates
 // multiple processing stages in a data flow pipeline.
@@ -66,11 +70,12 @@ func (s *Simulator) AddStage(stage *Stage) error {
 }
 
 // Start begins the simulation and blocks until completion.
+// If [printStats] is false the output will be saved graph viz dot notation.
 //
 // Validation rules:
 //   - At least 3 stages if you want to collect stats
-//   - Only one stage will result in creating a generator and nothing else.
-//   - Only two stages will result in having one generator and one dummy.
+//   - The first stage will be interpreted as the generator.
+//   - The last stage will be interpreted as the dummy.
 func (s *Simulator) Start(printStats bool) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -119,7 +124,9 @@ func (s *Simulator) waitForStats(printStats bool) {
 
 	if printStats {
 		s.printStats()
+		return
 	}
+	s.WritePipelineDot(GRAPH_FILE_NAME)
 }
 
 type stateEntry struct {
@@ -151,6 +158,67 @@ func (s *Simulator) printStats() {
 	for _, item := range allStages {
 		tracker.PrintBlockedTimeHistogram(item.Stats, item.Label)
 	}
+}
+
+// WritePipelineDot generates a Graphviz DOT representation of the pipeline
+// and writes it to the given file path.
+func (s *Simulator) WritePipelineDot(filename string) error {
+	var prevStats *stageStats
+	var b strings.Builder
+
+	stages := s.GetStages()
+
+	b.WriteString("digraph Pipeline {\n")
+	b.WriteString("  rankdir=LR;\n")
+	b.WriteString("  node [shape=box, style=filled, fontname=\"Arial\", fontsize=10];\n")
+	b.WriteString("  edge [fontname=\"Arial\", fontsize=8];\n\n")
+
+	// Define nodes
+	for i, stage := range stages {
+		currentStats := collectStageStats(stage)
+		procDiffStr, thruDiffStr := computeDiffs(prevStats, &currentStats)
+		prevStats = &currentStats
+
+		var nodeColor string
+		switch {
+		case stage.isGenerator:
+			nodeColor = "lightgreen"
+		case stage.isFinal:
+			nodeColor = "lightcoral"
+		default:
+			nodeColor = "lightblue"
+		}
+
+		label := fmt.Sprintf(`"%s\nRoutines: %d\nBuffer: %d\nProcessed: %d (%s)\nOutput: %d\nThroughput: %.2f (%s)"`,
+			stage.Name,
+			stage.Config.RoutineNum,
+			stage.Config.BufferSize,
+			currentStats.ProcessedItems, procDiffStr,
+			currentStats.OutputItems,
+			currentStats.Throughput, thruDiffStr,
+		)
+
+		fmt.Fprintf(&b, "  stage_%d [label=%s, style=filled, fillcolor=%s];\n",
+			i, label, nodeColor)
+	}
+
+	b.WriteString("\n")
+
+	// Define edges
+	for i := 0; i < len(stages)-1; i++ {
+		currentStage := stages[i]
+		edgeLabel := fmt.Sprintf("buffer=%d", currentStage.Config.BufferSize)
+		if currentStage.Config.DropOnBackpressure {
+			edgeLabel += "\\ndrop_on_full"
+		}
+		fmt.Fprintf(&b, "  stage_%d -> stage_%d [label=\"%s\"];\n",
+			i, i+1, edgeLabel)
+	}
+
+	b.WriteString("}\n")
+
+	// Write to file
+	return os.WriteFile(filename, []byte(b.String()), 0644)
 }
 
 func (s *Simulator) initializeStages() error {
