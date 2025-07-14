@@ -201,6 +201,12 @@ func (s *Simulator) WritePipelineDot(filename string) error {
 
 		fmt.Fprintf(&b, "  stage_%d [label=%s, style=filled, fillcolor=%s];\n",
 			i, label, nodeColor)
+
+		goroutineStats := stage.gm.GetAllStats()
+		err := tracker.WriteBlockedTimeHistogramDot(goroutineStats, stage.Name)
+		if err != nil {
+			return fmt.Errorf("goroutine tracker failed: %w", err)
+		}
 	}
 
 	b.WriteString("\n")
