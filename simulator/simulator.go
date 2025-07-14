@@ -14,6 +14,15 @@ import (
 
 const GRAPH_FILE_NAME = "pipeline.dot"
 
+// DataPresentationChoices are the current choices that the library offers for its output.
+type DataPresentationChoices int
+
+const (
+	DotFiles DataPresentationChoices = iota
+	Console
+	Nothing // Test purposes
+)
+
 // Simulator represents a concurrent pipeline simulator that orchestrates
 // multiple processing stages in a data flow pipeline.
 type Simulator struct {
@@ -71,13 +80,13 @@ func (s *Simulator) AddStage(stage *Stage) error {
 
 // Start begins the simulation and blocks until completion.
 //
-// If [printStats] is false the output will be saved in graph viz dot notation.
+// [DataPresentationChoices]
 //
 // Validation rules:
 //   - At least 3 stages if you want to collect stats
 //   - The first stage will be interpreted as the generator.
 //   - The last stage will be interpreted as the dummy.
-func (s *Simulator) Start(printStats bool) error {
+func (s *Simulator) Start(choice DataPresentationChoices) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -99,7 +108,7 @@ func (s *Simulator) Start(printStats bool) error {
 		close(s.quit)
 	}()
 
-	s.waitForStats(printStats)
+	s.waitForStats(choice)
 
 	return nil
 }
@@ -120,14 +129,19 @@ func (s *Simulator) done() <-chan struct{} {
 	return s.quit
 }
 
-func (s *Simulator) waitForStats(printStats bool) {
+func (s *Simulator) waitForStats(choice DataPresentationChoices) {
 	<-s.done()
 
-	if printStats {
+	switch choice {
+	case DotFiles:
+		err := s.WritePipelineDot(GRAPH_FILE_NAME)
+		if err != nil {
+			panic(err)
+		}
+	case Console:
 		s.printStats()
-		return
 	}
-	s.WritePipelineDot(GRAPH_FILE_NAME)
+
 }
 
 type stateEntry struct {

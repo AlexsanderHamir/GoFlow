@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"testing"
+
+	lib "github.com/AlexsanderHamir/GoFlow/simulator"
 )
 
 const (
@@ -16,7 +18,7 @@ func TestStatsConsistency(t *testing.T) {
 			generatorConfig, globalConfig, simulator := createConfigsAndSimulator()
 			createStages(t, simulator, generatorConfig, globalConfig)
 
-			if err := simulator.Start(false); err != nil {
+			if err := simulator.Start(lib.Console); err != nil {
 				log.Fatalf("Failed to start simulator in iteration %d: %v", i+1, err)
 			}
 
