@@ -43,8 +43,8 @@ For a detailed example, see [example.go](code_example/example.go).
 
 1. The first stage acts as the **generator**, feeding data into the pipeline. Configure it accordingly.
 2. The last stage acts as the **sink**, consuming and discarding data.
-3. Stats are printed to the terminal by default.
-4. Multiple stages can share the same configuration.
+3. Multiple stages can share the same configuration.
+4. When starting the simulation, you must specify one of the available output modes using the `DataPresentationChoices` option.
 
 ## Stats Explanation
 
@@ -57,7 +57,7 @@ For a detailed example, see [example.go](code_example/example.go).
 
 ## Output Options
 
-The library supports multiple output formats controlled via `DataPresentationChoices`. Below are the available modes:
+The library supports different output formats controlled via `DataPresentationChoices`. Below are the available modes:
 
 ### 1. **PrintToConsole**
 

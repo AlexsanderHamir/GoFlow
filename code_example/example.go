@@ -139,8 +139,7 @@ func Example() {
 		panic(err)
 	}
 
-	printStats := true
-	if err := sim.Start(printStats); err != nil {
+	if err := sim.Start(simulator.DotFiles); err != nil {
 		log.Fatalf("Failed to start simulator: %v", err)
 	}
 }
