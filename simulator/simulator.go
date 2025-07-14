@@ -168,9 +168,10 @@ func (s *Simulator) printStats() {
 		allStages = append(allStages, entry)
 	}
 
-	fmt.Println()
-	fmt.Printf("Goroutine Blocked Time Histogram")
-	fmt.Println()
+	println()
+	fmt.Println("================================")
+	fmt.Println("Goroutine Blocked Time Histogram")
+	fmt.Println("================================")
 
 	first := 0
 	last := len(stages) - 1

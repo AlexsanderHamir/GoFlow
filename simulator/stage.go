@@ -77,7 +77,8 @@ func (s *Stage) worker(wg *sync.WaitGroup) {
 		case <-s.Config.ctx.Done():
 			return
 		case item, ok := <-s.input:
-			s.gm.TrackSelectCase(s.Name, time.Since(startTime), id)
+			latency := time.Since(startTime)
+			s.gm.TrackSelectCase(s.Name, latency, id)
 			if !ok {
 				return
 			}
