@@ -188,6 +188,9 @@ func (s *Simulator) WritePipelineDot(filename string) error {
 	b.WriteString("  node [shape=box, style=filled, fontname=\"Arial\", fontsize=10];\n")
 	b.WriteString("  edge [fontname=\"Arial\", fontsize=8];\n\n")
 
+	first := 0
+	last := len(stages) - 1
+
 	for i, stage := range stages {
 		currentStats := collectStageStats(stage)
 		procDiffStr, thruDiffStr := computeDiffs(prevStats, &currentStats)
@@ -215,6 +218,10 @@ func (s *Simulator) WritePipelineDot(filename string) error {
 
 		fmt.Fprintf(&b, "  stage_%d [label=%s, style=filled, fillcolor=%s];\n",
 			i, label, nodeColor)
+
+		if i == first || i == last {
+			continue
+		}
 
 		goroutineStats := stage.gm.GetAllStats()
 		err := tracker.WriteBlockedTimeHistogramDot(goroutineStats, stage.Name)
