@@ -70,7 +70,8 @@ func (s *Simulator) AddStage(stage *Stage) error {
 }
 
 // Start begins the simulation and blocks until completion.
-// If [printStats] is false the output will be saved graph viz dot notation.
+//
+// If [printStats] is false the output will be saved in graph viz dot notation.
 //
 // Validation rules:
 //   - At least 3 stages if you want to collect stats
@@ -173,7 +174,6 @@ func (s *Simulator) WritePipelineDot(filename string) error {
 	b.WriteString("  node [shape=box, style=filled, fontname=\"Arial\", fontsize=10];\n")
 	b.WriteString("  edge [fontname=\"Arial\", fontsize=8];\n\n")
 
-	// Define nodes
 	for i, stage := range stages {
 		currentStats := collectStageStats(stage)
 		procDiffStr, thruDiffStr := computeDiffs(prevStats, &currentStats)
@@ -189,11 +189,12 @@ func (s *Simulator) WritePipelineDot(filename string) error {
 			nodeColor = "lightblue"
 		}
 
-		label := fmt.Sprintf(`"%s\nRoutines: %d\nBuffer: %d\nProcessed: %d (%s)\nOutput: %d\nThroughput: %.2f (%s)"`,
+		label := fmt.Sprintf(`"%s\nRoutines: %d\nBuffer: %d\nProcessed: %d (%s)\nDroppedItems: %d\nOutput: %d\nThroughput: %.2f (%s)"`,
 			stage.Name,
 			stage.Config.RoutineNum,
 			stage.Config.BufferSize,
 			currentStats.ProcessedItems, procDiffStr,
+			currentStats.DroppedItems,
 			currentStats.OutputItems,
 			currentStats.Throughput, thruDiffStr,
 		)
@@ -206,13 +207,7 @@ func (s *Simulator) WritePipelineDot(filename string) error {
 
 	// Define edges
 	for i := 0; i < len(stages)-1; i++ {
-		currentStage := stages[i]
-		edgeLabel := fmt.Sprintf("buffer=%d", currentStage.Config.BufferSize)
-		if currentStage.Config.DropOnBackpressure {
-			edgeLabel += "\\ndrop_on_full"
-		}
-		fmt.Fprintf(&b, "  stage_%d -> stage_%d [label=\"%s\"];\n",
-			i, i+1, edgeLabel)
+		fmt.Fprintf(&b, "  stage_%d -> stage_%d;\n", i, i+1)
 	}
 
 	b.WriteString("}\n")

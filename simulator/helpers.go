@@ -53,8 +53,8 @@ func getFloatMetric(stats map[string]any, key string) float64 {
 }
 
 func computeDiffs(prev, curr *stageStats) (procDiffStr, thruDiffStr string) {
-	procDiffStr = "-"
-	thruDiffStr = "-"
+	procDiffStr = ""
+	thruDiffStr = ""
 	if prev == nil {
 		return
 	}
