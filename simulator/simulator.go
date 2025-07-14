@@ -21,7 +21,7 @@ const (
 	// DotFiles outputs DOT files for the entire pipeline, including a blocked time histogram (in DOT format) for each stage's goroutines.
 	DotFiles DataPresentationChoices = iota
 	PrintToConsole
-	Nothing // Test purposes
+	Nothing // Test purposes, removes the log.
 )
 
 // Simulator represents a concurrent pipeline simulator that orchestrates
@@ -86,7 +86,7 @@ func (s *Simulator) AddStage(stage *Stage) error {
 // Validation rules:
 //   - At least 3 stages if you want to collect stats
 //   - The first stage will be interpreted as the generator.
-//   - The last stage will be interpreted as the dummy.
+//   - The last stage will be interpreted as the sink.
 func (s *Simulator) Start(choice DataPresentationChoices) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

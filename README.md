@@ -11,19 +11,13 @@
 
 **GoFlow** is a tool for visualizing and tuning the performance of your concurrent systems. It lets you easily experiment with buffer sizes, goroutine counts, and stage depth to find the optimal configuration.
 
-- **Console Output**
-  _Snapshot of the pipeline statistics:_
-
+- _Snapshot of the pipeline statistics:_
   ![Example Pipeline Visualization](example.png)
 
-- **Graphviz Pipeline Structure**
-  _Visual representation of the pipeline stages from dot files:_
-
+- _Visual representation of the pipeline stages from DOT files:_
   ![Pipeline Diagram](pipeline.svg)
 
-- **Goroutine Blocked Time Histogram**
-  _Visual representation of total blocked times per goroutine for each pipeline stage from dot files:_
-
+- _Visual representation of total blocked time per goroutine for each pipeline stage (from DOT files):_
   ![Goroutine Diagram](fraud.svg)
 
 ## Table of Contents
