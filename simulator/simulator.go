@@ -19,7 +19,7 @@ type DataPresentationChoices int
 
 const (
 	DotFiles DataPresentationChoices = iota
-	Console
+	PrintToConsole
 	Nothing // Test purposes
 )
 
@@ -138,7 +138,7 @@ func (s *Simulator) waitForStats(choice DataPresentationChoices) {
 		if err != nil {
 			panic(err)
 		}
-	case Console:
+	case PrintToConsole:
 		s.printStats()
 	}
 
@@ -169,8 +169,15 @@ func (s *Simulator) printStats() {
 	}
 
 	fmt.Println()
+	fmt.Printf("Goroutine Blocked Time Histogram")
+	fmt.Println()
 
-	for _, item := range allStages {
+	first := 0
+	last := len(stages) - 1
+	for i, item := range allStages {
+		if i == first || i == last {
+			continue
+		}
 		tracker.PrintBlockedTimeHistogram(item.Stats, item.Label)
 	}
 }

@@ -83,10 +83,24 @@ func (m *stageMetrics) getCommons() map[string]any {
 		duration = time.Since(m.startTime)
 	}
 
+	gen := atomic.LoadUint64(&m.generatedItems)
+	drop := atomic.LoadUint64(&m.droppedItems)
+	out := atomic.LoadUint64(&m.outputItems)
+
+	var dropRate float64
+	if gen > 0 {
+		dropRate = float64(drop) / float64(gen)
+	}
+
+	var throughput float64
+	if duration.Seconds() > 0 {
+		throughput = float64(out) / duration.Seconds()
+	}
+
 	return map[string]any{
-		"drop_rate":     float64(atomic.LoadUint64(&m.droppedItems)) / float64(atomic.LoadUint64(&m.generatedItems)),
-		"dropped_items": atomic.LoadUint64(&m.droppedItems),
-		"output_items":  atomic.LoadUint64(&m.outputItems),
-		"throughput":    float64(atomic.LoadUint64(&m.outputItems)) / duration.Seconds(),
+		"drop_rate":     dropRate,
+		"dropped_items": drop,
+		"output_items":  out,
+		"throughput":    throughput,
 	}
 }
