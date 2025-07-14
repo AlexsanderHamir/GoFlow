@@ -45,7 +45,7 @@
 ## Installation
 
 ```sh
-go get github.com/AlexsanderHamir/GoFlow@latest
+go get github.com/AlexsanderHamir/GoFlow@v1.0.5
 ```
 
 ## Usage Example
