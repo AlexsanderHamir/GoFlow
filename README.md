@@ -1,9 +1,8 @@
 # GoFlow
 
-
 [![Go Version](https://img.shields.io/badge/Go-1.24%2B-blue)](https://golang.org)
 [![Go Report Card](https://goreportcard.com/badge/github.com/AlexsanderHamir/GoFlow)](https://goreportcard.com/report/github.com/AlexsanderHamir/GoFlow)
-[![Coverage Status](https://coveralls.io/repos/github/AlexsanderHamir/GoFlow/badge.png?branch=main)](https://coveralls.io/github/AlexsanderHamir/GenPool?branch=main)
+[![Coverage Status](https://coveralls.io/repos/github/AlexsanderHamir/GoFlow/badge.png?branch=main)](https://coveralls.io/github/AlexsanderHamir/GoFlow?branch=main)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GoDoc](https://godoc.org/github.com/AlexsanderHamir/GoFlow?status.svg)](https://godoc.org/github.com/AlexsanderHamir/GoFlow/pkg/simulator)
 ![Issues](https://img.shields.io/github/issues/AlexsanderHamir/GoFlow)
