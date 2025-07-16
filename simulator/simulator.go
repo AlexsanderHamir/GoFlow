@@ -189,69 +189,18 @@ func (s *Simulator) printStats() {
 // WritePipelineDot generates a Graphviz DOT representation of the pipeline
 // and writes it to the given file path.
 func (s *Simulator) WritePipelineDot(filename string) error {
-	var prevStats *stageStats
 	var b strings.Builder
 
-	stages := s.GetStages()
+	s.writeDotHeader(&b)
 
-	b.WriteString("digraph Pipeline {\n")
-	b.WriteString("  rankdir=LR;\n")
-	b.WriteString("  node [shape=box, style=filled, fontname=\"Arial\", fontsize=10];\n")
-	b.WriteString("  edge [fontname=\"Arial\", fontsize=8];\n\n")
-
-	first := 0
-	last := len(stages) - 1
-
-	for i, stage := range stages {
-		currentStats := collectStageStats(stage)
-		procDiffStr, thruDiffStr := computeDiffs(prevStats, &currentStats)
-		prevStats = &currentStats
-
-		var nodeColor string
-		switch {
-		case stage.isGenerator:
-			nodeColor = "lightgreen"
-		case stage.isFinal:
-			nodeColor = "lightcoral"
-		default:
-			nodeColor = "lightblue"
-		}
-
-		label := fmt.Sprintf(`"%s\nRoutines: %d\nBuffer: %d\nProcessed: %d (%s)\nDroppedItems: %d\nOutput: %d\nThroughput: %.2f (%s)"`,
-			stage.Name,
-			stage.Config.RoutineNum,
-			stage.Config.BufferSize,
-			currentStats.ProcessedItems, procDiffStr,
-			currentStats.DroppedItems,
-			currentStats.OutputItems,
-			currentStats.Throughput, thruDiffStr,
-		)
-
-		fmt.Fprintf(&b, "  stage_%d [label=%s, style=filled, fillcolor=%s];\n",
-			i, label, nodeColor)
-
-		if i == first || i == last {
-			continue
-		}
-
-		goroutineStats := stage.gm.GetAllStats()
-		err := tracker.WriteBlockedTimeHistogramDot(goroutineStats, stage.Name)
-		if err != nil {
-			return fmt.Errorf("goroutine tracker failed: %w", err)
-		}
+	if err := s.writeDotNodes(&b); err != nil {
+		return err
 	}
 
-	b.WriteString("\n")
+	s.writeDotEdges(&b)
+	s.writeDotFooter(&b)
 
-	// Define edges
-	for i := 0; i < len(stages)-1; i++ {
-		fmt.Fprintf(&b, "  stage_%d -> stage_%d;\n", i, i+1)
-	}
-
-	b.WriteString("}\n")
-
-	// Write to file
-	return os.WriteFile(filename, []byte(b.String()), 0644)
+	return os.WriteFile(filename, []byte(b.String()), 0o644)
 }
 
 func (s *Simulator) initializeStages() error {

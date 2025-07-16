@@ -6,9 +6,16 @@ linters:
   enable:
     - errcheck
     - revive
-    - misspell
+    - govet
+    - gocritic
+    - gocyclo
+    - unused
 
 linters-settings:
+  gocritic:
+    enable-all: true
+  gocyclo:
+    min-complexity: 14
   revive:
     rules:
       - name: var-naming
@@ -16,6 +23,16 @@ linters-settings:
       - name: exported
       - name: error-naming
       - name: error-return
+      - name: atomic
+      - name: bare-return
+      - name: bool-literal-in-expr
+      - name: confusing-naming
+      - name: confusing-results
+      - name: constant-logical-expr
+      - name: context-as-argument
+      - name: datarace
+      - name: deep-exit
+      - name: early-return
 
 issues:
   exclude-use-default: false

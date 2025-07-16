@@ -2,7 +2,6 @@ package test
 
 import (
 	"fmt"
-	"log"
 	"testing"
 
 	lib "github.com/AlexsanderHamir/GoFlow/simulator"
@@ -19,7 +18,7 @@ func TestStatsConsistency(t *testing.T) {
 			createStages(t, simulator, generatorConfig, globalConfig)
 
 			if err := simulator.Start(lib.Nothing); err != nil {
-				log.Fatalf("Failed to start simulator in iteration %d: %v", i+1, err)
+				t.Fatalf("Failed to start simulator in iteration %d: %v", i+1, err)
 			}
 
 			checkStageAccountingConsistency(simulator, t)

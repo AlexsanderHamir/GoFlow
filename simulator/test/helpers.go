@@ -11,11 +11,11 @@ import (
 )
 
 // CreateConfigsAndSimulator creates a basic config for testing
-func createConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig, *simulator.Simulator) {
-	sim := simulator.NewSimulator()
+func createConfigsAndSimulator() (generatorConfig, globalConfig *simulator.StageConfig, sim *simulator.Simulator) {
+	sim = simulator.NewSimulator()
 	sim.Duration = 2 * time.Second
 
-	generatorConfig := &simulator.StageConfig{
+	generatorConfig = &simulator.StageConfig{
 		InputRate:  100 * time.Millisecond,
 		RoutineNum: 100,
 		BufferSize: 100,
@@ -24,7 +24,7 @@ func createConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig
 		},
 	}
 
-	globalConfig := &simulator.StageConfig{
+	globalConfig = &simulator.StageConfig{
 		RoutineNum:         100,
 		BufferSize:         100,
 		DropOnBackpressure: true,
@@ -37,7 +37,7 @@ func createConfigsAndSimulator() (*simulator.StageConfig, *simulator.StageConfig
 	return generatorConfig, globalConfig, sim
 }
 
-func createStages(t *testing.T, sim *simulator.Simulator, generatorConfig *simulator.StageConfig, globalConfig *simulator.StageConfig) {
+func createStages(t *testing.T, sim *simulator.Simulator, generatorConfig, globalConfig *simulator.StageConfig) {
 	stage1 := simulator.NewStage("Generator", generatorConfig)
 	stage2 := simulator.NewStage("Stage-1", globalConfig)
 	stage3 := simulator.NewStage("Stage-2", globalConfig)
