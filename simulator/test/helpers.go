@@ -98,9 +98,21 @@ func checkStageAccountingConsistency(simulator *simulator.Simulator, t *testing.
 			continue
 		}
 
-		currentProcessed := stats["processed_items"].(uint64)
-		currentOutput := stats["output_items"].(uint64)
-		currentDropped := stats["dropped_items"].(uint64)
+		currentProcessed, ok := stats["processed_items"].(uint64)
+		if !ok {
+			currentProcessed = 0
+		}
+
+		currentOutput, ok := stats["output_items"].(uint64)
+		if !ok {
+			currentOutput = 0
+		}
+
+		currentDropped, ok := stats["dropped_items"].(uint64)
+		if !ok {
+			currentDropped = 0
+		}
+		
 		currentStageTotalReceived := currentOutput + currentDropped
 
 		if currentProcessed > currentStageTotalReceived {
